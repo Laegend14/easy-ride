@@ -1,26 +1,169 @@
 @import "tailwindcss";
 
+/* ----------------------------------------------------------------------------
+   Easy Ride — Aurora design system
+   Dark-mode-first. Deep indigo-black base, multi-stop teal->indigo->violet
+   gradients, glassmorphism surfaces. (Synced with Stitch asset Aurora.)
+---------------------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base */
+  --background: #0b0b14;
+  --surface: #12121f;
+  --foreground: #f5f5fa;
+  --muted: #a1a1b5;
+
+  /* Brand gradient stops */
+  --teal: #14b8a6;
+  --indigo: #6366f1;
+  --violet: #a855f7;
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Canonical brand gradient */
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--teal) 0%,
+    var(--indigo) 50%,
+    var(--violet) 100%
+  );
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+
+  --color-teal: var(--teal);
+  --color-indigo: var(--indigo);
+  --color-violet: var(--violet);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+
+  --radius-pill: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), var(--font-sans), sans-serif;
+  }
+
+  ::selection {
+    background: rgba(99, 102, 241, 0.35);
+    color: var(--foreground);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Soft multi-radial aurora glow — sits behind hero / CTA sections. */
+  .aurora-mesh {
+    background-image:
+      radial-gradient(40% 50% at 15% 20%, rgba(20, 184, 166, 0.28), transparent 70%),
+      radial-gradient(45% 55% at 80% 15%, rgba(168, 85, 247, 0.26), transparent 70%),
+      radial-gradient(55% 60% at 50% 90%, rgba(99, 102, 241, 0.3), transparent 70%);
+  }
+
+  /* Glassmorphism panel. */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Gradient-tinted border via mask trick (border-only gradient). */
+  .glass-gradient-border {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .glass-gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-brand);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Gradient text. */
+  .text-gradient {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Brand gradient fill (buttons, bands). */
+  .bg-gradient-brand {
+    background: var(--gradient-brand);
+  }
 }
+
+/* Print: clean light receipt, hide app chrome. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  /* Hide the fixed aurora background + nav shells when printing. */
+  body > div > [aria-hidden],
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .receipt-sheet {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border: 1px solid #ddd !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+  .receipt-sheet .text-muted {
+    color: #555 !important;
+  }
+}
+
+/* Custom route-flow animation for SVG MockMap */
+@keyframes route-flow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-route-pulse {
+  animation: route-flow 1.2s linear infinite;
+}
+
