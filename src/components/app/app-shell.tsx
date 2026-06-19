@@ -27,9 +27,7 @@ export function AppShell({
       <aside className="glass fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/10 p-4 md:flex">
         <div className="flex items-center justify-between px-2 py-3">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-brand text-sm font-bold text-white">
-              E
-            </span>
+            <img src="/logo.png" alt="Easy Ride Logo" className="h-8 w-8 rounded-xl object-cover" />
             <span className="font-display text-lg font-semibold tracking-tight">
               Easy<span className="text-gradient">Ride</span>
             </span>
@@ -75,9 +73,7 @@ export function AppShell({
       {/* Mobile top bar */}
       <header className="glass fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-white/10 px-4 py-3 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-brand text-xs font-bold text-white">
-            E
-          </span>
+          <img src="/logo.png" alt="Easy Ride Logo" className="h-7 w-7 rounded-lg object-cover" />
           <span className="font-display font-semibold tracking-tight">
             Easy<span className="text-gradient">Ride</span>
           </span>

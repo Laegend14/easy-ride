@@ -36,9 +36,7 @@ export function SiteHeader() {
           )}
         >
           <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-brand text-sm font-bold text-white">
-              E
-            </span>
+            <img src="/logo.png" alt="Easy Ride Logo" className="h-8 w-8 rounded-xl object-cover" />
             <span className="font-display text-lg font-semibold tracking-tight">
               Easy<span className="text-gradient">Ride</span>
             </span>

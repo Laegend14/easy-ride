@@ -56,9 +56,7 @@ export function RideReceipt({ receipt }: { receipt: RideReceipt }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-brand text-sm font-bold text-white">
-              E
-            </span>
+            <img src="/logo.png" alt="Easy Ride Logo" className="h-9 w-9 rounded-xl object-cover" />
             <div>
               <div className="font-display font-semibold tracking-tight">
                 Easy<span className="text-gradient">Ride</span>

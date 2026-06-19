@@ -23,9 +23,7 @@ export default async function AuthLayout({
         href="/"
         className="absolute left-6 top-6 flex items-center gap-2"
       >
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-brand text-sm font-bold text-white">
-          E
-        </span>
+        <img src="/logo.png" alt="Easy Ride Logo" className="h-8 w-8 rounded-xl object-cover" />
         <span className="font-display text-lg font-semibold tracking-tight">
           Easy<span className="text-gradient">Ride</span>
         </span>
