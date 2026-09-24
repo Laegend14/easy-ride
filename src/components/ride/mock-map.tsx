@@ -4,6 +4,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { PRESET_CATEGORIES, type LocationDetail } from "@/lib/providers/locations";
 import { Navigation, MapPin, Coffee, Activity, Plane, Star } from "lucide-react";
 
+import { MapboxMap } from "./mapbox-map";
+
 interface MockMapProps {
   originAddress?: string;
   originLat?: number;
@@ -16,7 +18,16 @@ interface MockMapProps {
   showPreviewOnly?: boolean;
 }
 
-export function MockMap({
+export function MockMap(props: MockMapProps) {
+  const hasMapbox = Boolean(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
+  if (hasMapbox) {
+    return <MapboxMap {...props} />;
+  }
+
+  return <SvgRouteMap {...props} />;
+}
+
+function SvgRouteMap({
   originAddress = "Current location",
   originLat = 37.7880,
   originLng = -122.4075,

@@ -53,3 +53,22 @@ export async function generateJson<T>(args: {
   if (!text) throw new Error("Gemini returned an empty response");
   return JSON.parse(extractJson(text)) as T;
 }
+
+export async function generateText(args: {
+  prompt: string;
+  system?: string;
+}): Promise<string> {
+  const ai = getGeminiClient();
+  const res = await ai.models.generateContent({
+    model: serverEnv.geminiModel,
+    contents: args.prompt,
+    config: {
+      ...(args.system ? { systemInstruction: args.system } : {}),
+    },
+  });
+
+  const text = res.text;
+  if (!text) throw new Error("Gemini returned an empty response");
+  return text;
+}
+

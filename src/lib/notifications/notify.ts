@@ -1,8 +1,7 @@
 import "server-only";
-import type { createClient } from "@/utils/supabase/server";
 import type { NotificationType } from "@/types/database";
-
-type Supa = Awaited<ReturnType<typeof createClient>>;
+import { getAdminFirestore } from "@/lib/firebase/admin";
+import { getUserProfile } from "@/lib/firebase/db";
 
 export interface NotifyInput {
   type: NotificationType;
@@ -12,34 +11,33 @@ export interface NotifyInput {
 }
 
 /**
- * Best-effort notification insert. Runs under the user's session (owner RLS) and
+ * Best-effort notification insert. Runs under the user's session and
  * never throws — a notification failure must not break a payment/ride flow.
  */
 export async function notify(
-  supabase: Supa,
+  _supabaseOrStub: any,
   userId: string,
   input: NotifyInput,
 ): Promise<void> {
   try {
     // Respect the user's ride-update preference (savings_report is gated elsewhere).
     if (input.type !== "savings_report") {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("notify_ride_updates")
-        .eq("id", userId)
-        .single();
-      if (prof && prof.notify_ride_updates === false) return;
+      const prof = await getUserProfile(userId);
+      if (prof && prof.notifyRideUpdates === false) return;
     }
 
-    await supabase.from("notifications").insert({
-      user_id: userId,
+    const db = getAdminFirestore();
+    await db.collection("notifications").add({
+      userId,
       type: input.type,
       title: input.title,
       body: input.body ?? null,
-      ride_booking_id: input.rideBookingId ?? null,
+      rideBookingId: input.rideBookingId ?? null,
+      isRead: false,
+      createdAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("[notify] failed:", err);
+    console.warn("[notify] failed to write notification:", err);
   }
 }
 

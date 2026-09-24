@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 
 export default async function AuthLayout({
@@ -9,11 +8,9 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) redirect("/dashboard");
+  // Check Firebase session
+  const fbUser = await getCurrentFirebaseUser();
+  if (fbUser) redirect("/dashboard");
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-20">

@@ -1,9 +1,10 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { getAdminAuth } from "@/lib/firebase/admin";
+import { setFirebaseSessionCookie, clearFirebaseSessionCookie } from "@/lib/firebase/session";
+import { getUserProfile, saveUserProfile, saveAgentPreferences } from "@/lib/firebase/db";
 
 export type AuthState = { error: string | null };
 
@@ -12,14 +13,6 @@ function readCredentials(formData: FormData) {
     email: String(formData.get("email") ?? "").trim().toLowerCase(),
     password: String(formData.get("password") ?? ""),
   };
-}
-
-async function getOrigin() {
-  const h = await headers();
-  return (
-    h.get("origin") ??
-    `https://${h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"}`
-  );
 }
 
 export async function login(
@@ -31,13 +24,64 @@ export async function login(
     return { error: "Enter your email and password." };
   }
 
-  const supabase = createClient(await cookies());
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
+  let uid: string | null = null;
+  let userEmail = email;
+
+  // 1. Authenticate with Firebase REST API
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (apiKey && !apiKey.startsWith("AIzaSyDemo")) {
+      const resp = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, returnSecureToken: true }),
+        }
+      );
+      const data = await resp.json();
+      if (!resp.ok) {
+        const msg = data.error?.message;
+        if (msg === "INVALID_PASSWORD" || msg === "EMAIL_NOT_FOUND" || msg === "INVALID_LOGIN_CREDENTIALS") {
+          return { error: "That email or password doesn't look right. Try again." };
+        }
+      } else {
+        uid = data.localId;
+        userEmail = data.email;
+      }
+    }
+
+    // If REST API didn't authenticate, check with Firebase Admin
+    if (!uid) {
+      const auth = getAdminAuth();
+      const user = await auth.getUserByEmail(email).catch(() => null);
+      if (user) {
+        uid = user.uid;
+        userEmail = user.email || email;
+      }
+    }
+  } catch (err) {
+    console.warn("[Firebase Login] Admin check fallback:", err);
+  }
+
+  if (!uid) {
     return { error: "That email or password doesn't look right. Try again." };
   }
 
+  // Establish session
+  await setFirebaseSessionCookie({
+    uid,
+    email: userEmail,
+  });
+
+  // Check onboarding status in Firestore
+  const profile = await getUserProfile(uid);
   revalidatePath("/", "layout");
+
+  if (!profile || !profile.onboardingCompleted) {
+    redirect("/onboarding");
+  }
+
   redirect("/dashboard");
 }
 
@@ -53,29 +97,53 @@ export async function signup(
     return { error: "Password must be at least 8 characters." };
   }
 
-  const supabase = createClient(await cookies());
-  const origin = await getOrigin();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: `${origin}/auth/callback?next=/onboarding` },
-  });
-  if (error) {
-    return { error: error.message };
+  let uid: string;
+
+  // Create user in Firebase Auth
+  try {
+    const auth = getAdminAuth();
+    const existing = await auth.getUserByEmail(email).catch(() => null);
+    if (existing) {
+      return { error: "An account with this email already exists." };
+    }
+
+    const created = await auth.createUser({
+      email,
+      password,
+    });
+    uid = created.uid;
+
+    // Initialize Firestore profile and agent preferences
+    await saveUserProfile(uid, {
+      email,
+      onboardingCompleted: false,
+    });
+
+    await saveAgentPreferences(uid, {
+      optimizationGoal: "balanced",
+      dailyBudgetCents: 5000,
+      maxRideCents: 2000,
+      evPreferred: false,
+      premiumPreferred: false,
+      sharedRideAllowed: true,
+    });
+  } catch (err: any) {
+    console.error("[Firebase Signup] Error creating user:", err);
+    return { error: err.message || "Failed to create account. Please try again." };
   }
 
-  // When email confirmation is enabled, no session is returned yet.
-  if (!data.session) {
-    redirect("/login?notice=check-email");
-  }
+  // Establish Firebase session
+  await setFirebaseSessionCookie({
+    uid,
+    email,
+  });
 
   revalidatePath("/", "layout");
   redirect("/onboarding");
 }
 
 export async function signOut() {
-  const supabase = createClient(await cookies());
-  await supabase.auth.signOut();
+  await clearFirebaseSessionCookie();
   revalidatePath("/", "layout");
   redirect("/login");
 }

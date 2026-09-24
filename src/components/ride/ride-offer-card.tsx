@@ -16,22 +16,30 @@ function usd(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export function RideOfferCard({ offer }: { offer: RideOfferLite }) {
+interface RideOfferCardProps {
+  offer: RideOfferLite;
+  isSelected?: boolean;
+  onSelect?: () => void;
+}
+
+export function RideOfferCard({ offer, isSelected, onSelect }: RideOfferCardProps) {
   const Icon = VEHICLE_ICON[offer.vehicleClass] ?? Car;
+  const active = isSelected !== undefined ? isSelected : offer.selected;
 
   return (
     <div
+      onClick={onSelect}
       className={cn(
-        "rounded-2xl p-4 transition space-y-3",
-        offer.selected ? "glass-gradient-border" : "glass",
+        "rounded-2xl p-4 transition space-y-3 cursor-pointer select-none",
+        active ? "glass-gradient-border ring-2 ring-teal/50 shadow-lg" : "glass hover:bg-white/[0.04]",
         !offer.withinBudget && "opacity-60",
       )}
     >
       <div className="flex items-center gap-4">
         <span
           className={cn(
-            "grid h-11 w-11 shrink-0 place-items-center rounded-xl",
-            offer.selected ? "bg-gradient-brand text-white" : "bg-white/5 text-foreground",
+            "grid h-11 w-11 shrink-0 place-items-center rounded-xl transition",
+            active ? "bg-gradient-brand text-white shadow-md" : "bg-white/5 text-foreground",
           )}
         >
           <Icon className="h-5 w-5" />
@@ -42,7 +50,12 @@ export function RideOfferCard({ offer }: { offer: RideOfferLite }) {
             <span className="font-medium text-foreground">{offer.provider}</span>
             {offer.selected ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-xs font-medium text-teal">
-                <Check className="h-3 w-3" /> Recommended
+                <Check className="h-3 w-3" /> AI Recommended
+              </span>
+            ) : null}
+            {active && !offer.selected ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet/20 px-2 py-0.5 text-xs font-medium text-violet border border-violet/30">
+                Selected
               </span>
             ) : null}
             {!offer.withinBudget ? (

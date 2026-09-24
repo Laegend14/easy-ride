@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserProfile, getAgentPreferences } from "@/lib/firebase/db";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import {
   OnboardingWizard,
@@ -9,44 +9,22 @@ import {
 import type { OptimizationGoal } from "@/types/database";
 
 export default async function OnboardingPage() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, onboarding_completed")
-    .eq("id", user.id)
-    .single();
+  const profile = await getUserProfile(fbUser.uid);
+  if (profile?.onboardingCompleted) redirect("/dashboard");
 
-  if (profile?.onboarding_completed) redirect("/dashboard");
-
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  const { data: prefs } = agent
-    ? await supabase
-        .from("agent_preferences")
-        .select(
-          "optimization_goal, daily_budget_cents, max_ride_cents, ev_preferred, premium_preferred, shared_ride_allowed",
-        )
-        .eq("agent_id", agent.id)
-        .single()
-    : { data: null };
+  const prefs = await getAgentPreferences(fbUser.uid);
 
   const initial: OnboardingInitial = {
-    fullName: profile?.full_name ?? "",
-    optimizationGoal: (prefs?.optimization_goal as OptimizationGoal) ?? "balanced",
-    dailyBudgetCents: prefs?.daily_budget_cents ?? 5000,
-    maxRideCents: prefs?.max_ride_cents ?? 2000,
-    evPreferred: prefs?.ev_preferred ?? false,
-    premiumPreferred: prefs?.premium_preferred ?? false,
-    sharedRideAllowed: prefs?.shared_ride_allowed ?? true,
+    fullName: profile?.fullName ?? "",
+    optimizationGoal: (prefs?.optimizationGoal as OptimizationGoal) ?? "balanced",
+    dailyBudgetCents: prefs?.dailyBudgetCents ?? 5000,
+    maxRideCents: prefs?.maxRideCents ?? 2000,
+    evPreferred: prefs?.evPreferred ?? false,
+    premiumPreferred: prefs?.premiumPreferred ?? false,
+    sharedRideAllowed: prefs?.sharedRideAllowed ?? true,
   };
 
   return (

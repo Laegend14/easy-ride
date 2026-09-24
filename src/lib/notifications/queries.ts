@@ -1,6 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
 import type { NotificationType } from "@/types/database";
 
 export interface NotificationItem {
@@ -17,28 +16,21 @@ export interface NotificationFeed {
   unread: number;
 }
 
-export async function getNotificationFeed(limit = 20): Promise<NotificationFeed> {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { items: [], unread: 0 };
+export async function getNotificationFeed(_limit = 20): Promise<NotificationFeed> {
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return { items: [], unread: 0 };
 
-  const { data } = await supabase
-    .from("notifications")
-    .select("id, type, title, body, is_read, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  const items = (data ?? []).map((n) => ({
-    id: n.id,
-    type: n.type,
-    title: n.title,
-    body: n.body,
-    isRead: n.is_read,
-    createdAt: n.created_at,
-  }));
+  // System welcome notification
+  const items: NotificationItem[] = [
+    {
+      id: "welcome-1",
+      type: "ride_booked",
+      title: "Welcome to Easy Ride",
+      body: "Your autonomous mobility agent is ready to dispatch rides across top providers.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    },
+  ];
 
   return { items, unread: items.filter((i) => !i.isRead).length };
 }

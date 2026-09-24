@@ -55,30 +55,94 @@ interface VehicleDetail {
 }
 
 const MOCK_DRIVERS: DriverDetail[] = [
-  { name: "Amara O.", sex: "Female", photo: "/images/drivers/driver_female_1.png", rating: 4.8 },
-  { name: "Daniel K.", sex: "Male", photo: "/images/drivers/driver_male_1.png", rating: 4.6 },
-  { name: "Sofia R.", sex: "Female", photo: "/images/drivers/driver_female_1.png", rating: 4.7 },
-  { name: "Liang W.", sex: "Male", photo: "/images/drivers/driver_male_1.png", rating: 4.3 },
-  { name: "Zara H.", sex: "Female", photo: "/images/drivers/driver_female_1.png", rating: 4.9 },
+  {
+    name: "Amara O.",
+    sex: "Female",
+    // Professional headshot — Black woman, smiling
+    photo: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=200&h=200&fit=crop&crop=face",
+    rating: 4.8,
+  },
+  {
+    name: "Daniel K.",
+    sex: "Male",
+    // Professional headshot — Black man, smiling
+    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
+    rating: 4.6,
+  },
+  {
+    name: "Sofia R.",
+    sex: "Female",
+    // Professional headshot — Hispanic woman
+    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face",
+    rating: 4.7,
+  },
+  {
+    name: "Liang W.",
+    sex: "Male",
+    // Professional headshot — Asian man
+    photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face",
+    rating: 4.3,
+  },
+  {
+    name: "Zara H.",
+    sex: "Female",
+    // Professional headshot — woman with hijab
+    photo: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=200&h=200&fit=crop&crop=face",
+    rating: 4.9,
+  },
 ];
 
 const MOCK_VEHICLES: Record<VehicleClass, VehicleDetail[]> = {
   standard: [
-    { name: "Toyota Corolla", photo: "/images/vehicles/car_sedan.png" },
-    { name: "Honda Civic", photo: "/images/vehicles/car_sedan.png" },
-    { name: "VW Passat", photo: "/images/vehicles/car_sedan.png" },
+    {
+      name: "Toyota Corolla",
+      // White Toyota Corolla sedan
+      photo: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=250&fit=crop",
+    },
+    {
+      name: "Honda Civic",
+      // Silver Honda Civic
+      photo: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=250&fit=crop",
+    },
+    {
+      name: "VW Passat",
+      // Grey VW Passat / mid-size sedan
+      photo: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=400&h=250&fit=crop",
+    },
   ],
   shared: [
-    { name: "Toyota Corolla (Shared)", photo: "/images/vehicles/car_sedan.png" },
-    { name: "Honda Civic (Shared)", photo: "/images/vehicles/car_sedan.png" },
+    {
+      name: "Toyota Corolla (Shared)",
+      photo: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=250&fit=crop",
+    },
+    {
+      name: "Honda Civic (Shared)",
+      photo: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=250&fit=crop",
+    },
   ],
   premium: [
-    { name: "Tesla Model 3 Premium", photo: "/images/vehicles/car_ev.png" },
+    {
+      name: "Tesla Model 3 Premium",
+      // Red Tesla Model 3
+      photo: "https://images.unsplash.com/photo-1561580125-028ee3bd62eb?w=400&h=250&fit=crop",
+    },
   ],
   ev: [
-    { name: "Hyundai Ioniq 5", photo: "/images/vehicles/car_ev.png" },
-    { name: "Tesla Model 3", photo: "/images/vehicles/car_ev.png" },
-    { name: "Kia Niro EV", photo: "/images/vehicles/car_ev.png" },
+    {
+      name: "Hyundai Ioniq 5",
+      // White Hyundai Ioniq 5
+      photo: "https://images.unsplash.com/photo-1651286738017-84a1a1e3e4de?w=400&h=250&fit=crop",
+    },
+    {
+      name: "Tesla Model 3",
+      // Black Tesla Model 3
+      photo: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=250&fit=crop",
+    },
+    {
+      name: "Kia Niro EV",
+      // White Kia Niro EV
+      photo: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&h=250&fit=crop",
+    },
   ],
 };
 

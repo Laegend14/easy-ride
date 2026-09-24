@@ -73,15 +73,34 @@ export function FundControls({ defaultDestination }: { defaultDestination?: stri
             free — one top-up at a time.
           </p>
           {defaultDestination && (
-            <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5 animate-fade-in">
-              <span className="text-xs font-medium text-muted block">
-                {["Wall", "et"].join("") + " " + ["Addr", "ess"].join("")}
-              </span>
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-2 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted block">
+                  Deposit Address
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal/15 text-teal font-medium">
+                  Multi-Chain CCTP (Domain 26)
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-mono break-all select-all text-foreground block">
+                <span className="text-xs font-mono break-all select-all text-foreground block">
                   {defaultDestination}
                 </span>
                 <CopyButton text={defaultDestination} />
+              </div>
+              <div className="pt-2 border-t border-white/10 space-y-1">
+                <span className="text-[10px] text-muted block font-semibold uppercase tracking-wider">
+                  Supported Networks
+                </span>
+                <div className="flex flex-wrap gap-1 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-md bg-white/10 text-foreground font-medium">Arc Testnet (1s)</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-muted">Sepolia</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-muted">Base</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-muted">Arbitrum</span>
+                </div>
+                <p className="text-[10px] text-muted pt-0.5">
+                  Send USDC directly on Arc or bridge from Sepolia/Base/Arb via Circle CCTP. Tokens mint directly into your balance.
+                </p>
               </div>
             </div>
           )}

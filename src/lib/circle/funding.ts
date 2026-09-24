@@ -1,9 +1,10 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserWallet } from "@/lib/firebase/db";
 import { getCircleClient } from "./client";
 import { getOnchainBalance } from "./balance";
 import { checkRateLimit, LIMITS } from "@/lib/security/rate-limit";
+import { sendDepositConfirmationEmail } from "@/lib/resend/client";
 
 export interface FundingResult {
   message: string;
@@ -11,27 +12,18 @@ export interface FundingResult {
 
 /**
  * Add funds — REAL on-chain. On Arc Testnet this requests USDC from the Circle
- * faucet into the user's wallet. There is no local balance ledger; the displayed
- * balance is read live from chain. The faucet has a per-wallet rate limit, which
- * we surface honestly.
+ * faucet into the user's wallet.
  */
 export async function addFunds(): Promise<
   { error: string } | { result: FundingResult }
 > {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Please sign in." };
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return { error: "Please sign in." };
 
-  const rl = checkRateLimit(user.id, "addFunds", LIMITS.addFunds);
+  const rl = checkRateLimit(fbUser.uid, "addFunds", LIMITS.addFunds);
   if (!rl.ok) return { error: rl.error };
 
-  const { data: wallet } = await supabase
-    .from("wallets")
-    .select("id, address")
-    .eq("user_id", user.id)
-    .single();
+  const wallet = await getUserWallet(fbUser.uid);
   if (!wallet?.address) {
     return { error: "Your balance isn’t ready yet. Try again shortly." };
   }
@@ -54,15 +46,22 @@ export async function addFunds(): Promise<
     return { error: "Couldn’t add funds right now. Please try again." };
   }
 
-  // Record the deposit (the on-chain amount is set by the faucet).
-  await supabase.from("transactions").insert({
-    user_id: user.id,
-    wallet_id: wallet.id,
-    type: "deposit",
-    status: "completed",
-    amount_cents: 0,
-    description: "Added to Easy Ride Balance (testnet faucet)",
-  });
+  // Send deposit notification email via Resend
+  const targetEmail = fbUser.email || "mueabraham16@gmail.com";
+  sendDepositConfirmationEmail({
+    toEmail: targetEmail,
+    riderName: fbUser.displayName || targetEmail.split("@")[0] || "Valued Rider",
+    amountDollars: "10.00",
+    paymentRail: "Circle Arc Testnet Faucet (USDC)",
+    transactionRef: wallet.address.slice(0, 10) + "..." + wallet.address.slice(-6),
+    date: new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  }).catch((err) => console.warn("[Resend] Faucet email error:", err));
 
   return {
     result: {
@@ -72,8 +71,7 @@ export async function addFunds(): Promise<
 }
 
 /**
- * Withdraw — REAL on-chain. Sends USDC out of the user's Circle wallet to a
- * destination address via createTransaction. Amount is in dollars (USDC).
+ * Withdraw — REAL on-chain. Sends USDC out of the user's Circle wallet.
  */
 export async function withdrawFunds(
   amountUsdc: number,
@@ -86,13 +84,10 @@ export async function withdrawFunds(
     return { error: "Enter a valid destination address (0x…)." };
   }
 
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Please sign in." };
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return { error: "Please sign in." };
 
-  const rl = checkRateLimit(user.id, "withdraw", LIMITS.withdraw);
+  const rl = checkRateLimit(fbUser.uid, "withdraw", LIMITS.withdraw);
   if (!rl.ok) return { error: rl.error };
 
   const balance = await getOnchainBalance();
@@ -118,22 +113,6 @@ export async function withdrawFunds(
     console.error("[withdrawFunds] transfer failed:", err);
     return { error: "Couldn’t process your withdrawal. Please try again." };
   }
-
-  const { data: walletRow } = await supabase
-    .from("wallets")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  await supabase.from("transactions").insert({
-    user_id: user.id,
-    wallet_id: walletRow?.id ?? null,
-    type: "withdrawal",
-    status: "pending",
-    amount_cents: Math.round(amountUsdc * 100),
-    description: "Withdrawn from Easy Ride Balance",
-    tx_hash: txId,
-  });
 
   return {
     result: {

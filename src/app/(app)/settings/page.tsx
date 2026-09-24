@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { User, SlidersHorizontal, Bell, Shield, LogOut } from "lucide-react";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserProfile, getAgentPreferences } from "@/lib/firebase/db";
 import { signOut } from "@/app/(auth)/actions";
 import { getWalletDetails } from "@/lib/circle/wallets";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -33,37 +33,24 @@ function Section({
 }
 
 export default async function SettingsPage() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "full_name, email, home_address, work_address, notify_ride_updates, notify_savings_reports",
-    )
-    .eq("id", user.id)
-    .single();
+  const [profile, prefs, details] = await Promise.all([
+    getUserProfile(fbUser.uid),
+    getAgentPreferences(fbUser.uid),
+    getWalletDetails(),
+  ]);
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  const { data: prefs } = agent
-    ? await supabase
-        .from("agent_preferences")
-        .select(
-          "optimization_goal, daily_budget_cents, max_ride_cents, ev_preferred, premium_preferred, shared_ride_allowed, auto_accept_alternatives, require_confirmation_before_rebooking",
-        )
-        .eq("agent_id", agent.id)
-        .single()
-    : { data: null };
-
-  const details = await getWalletDetails();
+  const fullName = profile?.fullName || "";
+  const homeAddress = profile?.homeAddress || "";
+  const workAddress = profile?.workAddress || "";
+  const optimizationGoal = (prefs?.optimizationGoal || "balanced") as OptimizationGoal;
+  const dailyBudgetCents = prefs?.dailyBudgetCents ?? 5000;
+  const maxRideCents = prefs?.maxRideCents ?? 2000;
+  const evPreferred = prefs?.evPreferred ?? false;
+  const premiumPreferred = prefs?.premiumPreferred ?? false;
+  const sharedRideAllowed = prefs?.sharedRideAllowed ?? true;
 
   return (
     <div className="space-y-6">
@@ -74,32 +61,30 @@ export default async function SettingsPage() {
 
       <Section icon={<User className="h-4 w-4" />} title="Profile">
         <ProfileForm
-          fullName={profile?.full_name ?? ""}
-          email={profile?.email ?? user.email ?? ""}
-          homeAddress={profile?.home_address ?? ""}
-          workAddress={profile?.work_address ?? ""}
+          fullName={fullName}
+          email={fbUser.email ?? ""}
+          homeAddress={homeAddress}
+          workAddress={workAddress}
         />
       </Section>
 
       <Section icon={<SlidersHorizontal className="h-4 w-4" />} title="Your agent">
         <PreferencesForm
-          optimizationGoal={(prefs?.optimization_goal as OptimizationGoal) ?? "balanced"}
-          dailyBudgetCents={prefs?.daily_budget_cents ?? 5000}
-          maxRideCents={prefs?.max_ride_cents ?? 2000}
-          evPreferred={prefs?.ev_preferred ?? false}
-          premiumPreferred={prefs?.premium_preferred ?? false}
-          sharedRideAllowed={prefs?.shared_ride_allowed ?? true}
-          autoAcceptAlternatives={prefs?.auto_accept_alternatives ?? false}
-          requireConfirmationBeforeRebooking={
-            prefs?.require_confirmation_before_rebooking ?? false
-          }
+          optimizationGoal={optimizationGoal}
+          dailyBudgetCents={dailyBudgetCents}
+          maxRideCents={maxRideCents}
+          evPreferred={evPreferred}
+          premiumPreferred={premiumPreferred}
+          sharedRideAllowed={sharedRideAllowed}
+          autoAcceptAlternatives={false}
+          requireConfirmationBeforeRebooking={false}
         />
       </Section>
 
       <Section icon={<Bell className="h-4 w-4" />} title="Notifications">
         <NotificationsForm
-          rideUpdates={profile?.notify_ride_updates ?? true}
-          savingsReports={profile?.notify_savings_reports ?? true}
+          rideUpdates={true}
+          savingsReports={true}
         />
       </Section>
 

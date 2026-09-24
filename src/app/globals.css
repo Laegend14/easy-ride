@@ -167,3 +167,15 @@
   animation: route-flow 1.2s linear infinite;
 }
 
+/* Hide scrollbar across the whole page on landing (no-scroll layout) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.animate-blink {
+  animation: blink 1s step-start infinite;
+}

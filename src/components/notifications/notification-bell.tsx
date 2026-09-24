@@ -110,7 +110,7 @@ export function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="glass absolute right-0 md:left-full md:right-auto md:top-0 md:ml-3 top-11 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-white/10 shadow-xl shadow-black/40">
+        <div className="absolute right-0 top-12 z-[200] w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/15 bg-[#111827]/98 backdrop-blur-2xl shadow-2xl shadow-black/60 ring-1 ring-white/5">
           <div className="border-b border-white/10 px-4 py-3 text-sm font-medium text-foreground">
             Notifications
           </div>
@@ -126,8 +126,8 @@ export function NotificationBell() {
                   <div
                     key={n.id}
                     className={cn(
-                      "flex gap-3 px-4 py-3 transition",
-                      !n.isRead && "bg-white/[0.03]",
+                      "flex gap-3 px-4 py-3 transition hover:bg-white/[0.04]",
+                      !n.isRead && "bg-teal/[0.06] border-l-2 border-l-teal/40",
                     )}
                   >
                     <span className={cn("mt-0.5 shrink-0", TINT[n.type] ?? "text-teal")}>

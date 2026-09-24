@@ -1,25 +1,19 @@
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserProfile } from "@/lib/firebase/db";
 import { RideExperience } from "@/components/ride/ride-experience";
 
 export default async function RidePage() {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null; // (app) layout handles the redirect
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return null;
 
-  const { data: places } = await supabase
-    .from("destinations")
-    .select("kind")
-    .eq("user_id", user.id)
-    .in("kind", ["home", "work"]);
+  const profile = await getUserProfile(fbUser.uid);
+  const hasHome = Boolean(profile?.homeAddress);
+  const hasWork = Boolean(profile?.workAddress);
 
-  const kinds = new Set((places ?? []).map((p) => p.kind));
   const examples = [
     "Take me to the airport",
-    ...(kinds.has("home") ? ["Take me home, cheapest"] : []),
-    ...(kinds.has("work") ? ["Get me to work, fastest"] : []),
+    ...(hasHome ? ["Take me home, cheapest"] : ["Take me home"]),
+    ...(hasWork ? ["Get me to work, fastest"] : ["Get me to work"]),
     "I need an EV downtown",
   ];
 

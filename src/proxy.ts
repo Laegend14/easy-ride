@@ -1,9 +1,8 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/utils/supabase/middleware";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function proxy(request: NextRequest) {
-  const { supabaseResponse } = await updateSession(request);
-  return supabaseResponse;
+export async function proxy(_request: NextRequest) {
+  // Ultra-fast pass-through proxy for Next.js 16
+  return NextResponse.next();
 }
 
 export const config = {

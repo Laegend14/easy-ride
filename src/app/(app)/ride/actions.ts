@@ -1,10 +1,19 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { randomUUID } from "node:crypto";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import {
+  getUserProfile,
+  getAgentPreferences,
+  saveRideRequest,
+  saveRideQuotes,
+  setSelectedQuote,
+  type RideRequestRecord,
+  type RideQuoteRecord,
+} from "@/lib/firebase/db";
 import { createDefaultRegistry, resolveLocationDetails } from "@/lib/providers";
 import type { RideSearchParams, VehicleClass } from "@/lib/providers";
-import { RideAgent, MockEconomicActions, prefsFromRow } from "@/lib/agent";
+import { RideAgent, MockEconomicActions } from "@/lib/agent";
 import { parseRideIntent, generateRideInsight } from "@/lib/gemini";
 import { bookSelectedRide, settleRide } from "@/lib/payments/booking";
 import { getRideStatus, type RideStatusView } from "@/lib/payments/ride-status";
@@ -57,41 +66,24 @@ export async function requestRide(
   const rawText = clampText(formData.get("query"), 280);
   if (!rawText) return { error: "Tell me where you'd like to go." };
 
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Please sign in to request a ride." };
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return { error: "Please sign in to request a ride." };
 
-  const rl = checkRateLimit(user.id, "rideSearch", LIMITS.rideSearch);
+  const rl = checkRateLimit(fbUser.uid, "rideSearch", LIMITS.rideSearch);
   if (!rl.ok) return { error: rl.error };
 
-  // Agent + preferences
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-  const { data: prefRow } = agent
-    ? await supabase
-        .from("agent_preferences")
-        .select(
-          "optimization_goal, daily_budget_cents, max_ride_cents, ev_preferred, premium_preferred, shared_ride_allowed",
-        )
-        .eq("agent_id", agent.id)
-        .single()
-    : { data: null };
+  // Agent + preferences from Firestore
+  const prefRow = await getAgentPreferences(fbUser.uid);
+  const profile = await getUserProfile(fbUser.uid);
 
-  const prefs = prefRow
-    ? prefsFromRow(prefRow)
-    : {
-        optimizationGoal: "balanced" as const,
-        dailyBudgetCents: 5000,
-        maxRideCents: 2000,
-        evPreferred: false,
-        premiumPreferred: false,
-        sharedRideAllowed: true,
-      };
+  const prefs = {
+    optimizationGoal: prefRow?.optimizationGoal ?? ("balanced" as const),
+    dailyBudgetCents: prefRow?.dailyBudgetCents ?? 5000,
+    maxRideCents: prefRow?.maxRideCents ?? 2000,
+    evPreferred: prefRow?.evPreferred ?? false,
+    premiumPreferred: prefRow?.premiumPreferred ?? false,
+    sharedRideAllowed: prefRow?.sharedRideAllowed ?? true,
+  };
 
   // 1) Gemini understanding
   const intent = await parseRideIntent(rawText);
@@ -105,32 +97,19 @@ export async function requestRide(
     };
   }
 
-  // 2) Resolve places from saved destinations when referenced
-  const resolvePlace = async (
-    ref: string | null,
-    fallback: string,
-  ): Promise<string> => {
-    if (ref === "home" || ref === "work") {
-      const { data: place } = await supabase
-        .from("destinations")
-        .select("address")
-        .eq("user_id", user.id)
-        .eq("kind", ref)
-        .maybeSingle();
-      if (place?.address) return place.address;
-    }
+  // 2) Resolve places from saved destinations
+  const resolvePlace = (ref: string | null, fallback: string): string => {
+    if (ref === "home" && profile?.homeAddress) return profile.homeAddress;
+    if (ref === "work" && profile?.workAddress) return profile.workAddress;
     return fallback;
   };
 
-  const destinationText = await resolvePlace(
+  const destinationText = resolvePlace(
     intent.destination.placeRef,
     intent.destination.address ?? intent.destination.raw,
   );
   const originText = intent.origin
-    ? await resolvePlace(
-        intent.origin.placeRef,
-        intent.origin.address ?? intent.origin.raw,
-      )
+    ? resolvePlace(intent.origin.placeRef, intent.origin.address ?? intent.origin.raw)
     : "Current location";
 
   // Resolve named locations & coordinates
@@ -139,26 +118,24 @@ export async function requestRide(
 
   const destinationAddress = destLoc.address;
   const originAddress = originLoc.address;
+  const reqId = randomUUID();
 
-  // 3) Persist the request
-  const { data: reqRow, error: reqErr } = await supabase
-    .from("ride_requests")
-    .insert({
-      user_id: user.id,
-      agent_id: agent?.id ?? null,
-      raw_text: rawText,
-      parsed_intent: intent,
-      origin_address: originAddress,
-      origin_lat: originLoc.lat,
-      origin_lng: originLoc.lng,
-      destination_address: destinationAddress,
-      destination_lat: destLoc.lat,
-      destination_lng: destLoc.lng,
-      status: "SEARCHING",
-    })
-    .select("id")
-    .single();
-  if (reqErr || !reqRow) return { error: "Couldn't start your search. Try again." };
+  // 3) Persist the request to Firestore
+  const requestRecord: RideRequestRecord = {
+    id: reqId,
+    userId: fbUser.uid,
+    rawText,
+    originAddress,
+    originLat: originLoc.lat,
+    originLng: originLoc.lng,
+    destinationAddress,
+    destinationLat: destLoc.lat,
+    destinationLng: destLoc.lng,
+    status: "SEARCHING",
+    createdAt: new Date().toISOString(),
+  };
+
+  await saveRideRequest(requestRecord);
 
   // 4) Provider search + agent recommendation
   const params: RideSearchParams = {
@@ -171,61 +148,42 @@ export async function requestRide(
   const agentEngine = new RideAgent(createDefaultRegistry(), new MockEconomicActions());
   const plan = await agentEngine.planRide(params, { ...prefs, optimizationGoal: goal });
 
-  // 5) Persist quotes
+  // 5) Persist quotes to Firestore
   if (plan.offers.length > 0) {
-    await supabase.from("ride_quotes").insert(
-      plan.offers.map((o) => ({
-        ride_request_id: reqRow.id,
-        provider: o.provider,
-        product_name: o.productName,
-        fare_cents: o.fareCents,
-        eta_minutes: o.etaMinutes,
-        rating: o.rating,
-        is_selected: o.selected,
-        score: o.score,
-        raw: o.raw ?? null,
-      })),
-    );
+    const quotesToSave: RideQuoteRecord[] = plan.offers.map((o) => ({
+      id: o.offerId || (o as any).id || randomUUID(),
+      rideRequestId: reqId,
+      provider: o.provider,
+      productName: o.productName,
+      fareCents: o.fareCents,
+      etaMinutes: o.etaMinutes,
+      rating: o.rating,
+      isSelected: o.selected,
+      score: o.score,
+    }));
+    await saveRideQuotes(reqId, quotesToSave);
   }
 
-  // 6) Insight (Gemini + fallback) + decision record
+  // 6) Insight (Gemini + fallback)
   const insight = await generateRideInsight({ intent, plan });
-  await supabase.from("agent_decisions").insert({
-    agent_id: agent?.id ?? null,
-    ride_request_id: reqRow.id,
-    decision_type: "ride_planned",
-    reasoning: insight.reasoning,
-    structured: {
-      goal,
-      selected: plan.selected?.provider ?? null,
-      offerCount: plan.offers.length,
-      rejectedForBudget: plan.rejectedForBudget,
-    },
-  });
-
-  // 7) Advance status
-  await supabase
-    .from("ride_requests")
-    .update({ status: plan.selected ? "PROVIDER_SELECTED" : "SEARCHING" })
-    .eq("id", reqRow.id);
 
   return {
     error: null,
-    rideRequestId: reqRow.id,
+    rideRequestId: reqId,
     query: rawText,
     destinationLabel: destLoc.label,
     selectedProvider: plan.selected?.provider ?? null,
     reasoning: insight.reasoning,
     savings: insight.savings,
     summary: insight.summary,
-    originAddress: originAddress,
+    originAddress,
     originLat: originLoc.lat,
     originLng: originLoc.lng,
-    destinationAddress: destinationAddress,
+    destinationAddress,
     destinationLat: destLoc.lat,
     destinationLng: destLoc.lng,
     offers: plan.offers.map((o) => ({
-      offerId: o.offerId,
+      offerId: o.offerId || (o as any).id || randomUUID(),
       provider: o.provider,
       productName: o.productName,
       vehicleClass: o.vehicleClass,
@@ -257,7 +215,15 @@ export async function bookRide(
   formData: FormData,
 ): Promise<BookingState> {
   const rideRequestId = String(formData.get("rideRequestId") ?? "");
+  const selectedOfferId = String(
+    formData.get("selectedOfferId") ?? formData.get("offerId") ?? "",
+  );
+
   if (!rideRequestId) return { error: "Missing ride to book." };
+
+  if (selectedOfferId) {
+    await setSelectedQuote(rideRequestId, selectedOfferId);
+  }
 
   const result = await bookSelectedRide(rideRequestId);
   if ("error" in result) return { error: result.error };

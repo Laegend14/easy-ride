@@ -1,7 +1,8 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserWallet } from "@/lib/firebase/db";
 import { getCircleClient } from "./client";
+import { getVerifiedStripeDepositsTotal } from "@/lib/payments/stripe-checkout";
 
 export interface OnchainBalance {
   /** USDC balance as a decimal number (e.g. 40 = $40.00). */
@@ -10,50 +11,66 @@ export interface OnchainBalance {
   tokenId: string | null;
   walletId: string;
   address: string | null;
+  /** Breakdown for clarity */
+  cryptoUsdc?: number;
+  stripeUsd?: number;
 }
 
 /**
- * Reads the user's REAL on-chain USDC balance from their Circle wallet on Arc
- * Testnet. This is the authoritative Easy Ride Balance — no local ledger.
- * Prefers the standard ERC-20 USDC token; falls back to native USDC.
+ * Reads the user's REAL balance:
+ * 1. REAL on-chain crypto USDC from their Circle wallet on Arc Testnet (authoritative crypto balance)
+ * 2. REAL verified Stripe card/Apple Pay deposits (authoritative fiat deposits)
+ * Zero simulated numbers.
  */
 export async function getOnchainBalance(): Promise<OnchainBalance | null> {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return null;
 
-  const { data: wallet } = await supabase
-    .from("wallets")
-    .select("circle_wallet_id, address")
-    .eq("user_id", user.id)
-    .single();
-  if (!wallet?.circle_wallet_id) return null;
+  const [wallet, realStripeUsd] = await Promise.all([
+    getUserWallet(fbUser.uid),
+    getVerifiedStripeDepositsTotal(fbUser.uid),
+  ]);
+
+  if (!wallet?.circleWalletId) {
+    return {
+      usdc: realStripeUsd,
+      cryptoUsdc: 0,
+      stripeUsd: realStripeUsd,
+      tokenId: null,
+      walletId: "pending",
+      address: wallet?.address ?? null,
+    };
+  }
 
   try {
     const res = await getCircleClient().getWalletTokenBalance({
-      id: wallet.circle_wallet_id,
+      id: wallet.circleWalletId,
       includeAll: true,
     });
     const balances = res.data?.tokenBalances ?? [];
     const usdcTokens = balances.filter((b) => b.token?.symbol === "USDC");
-    // Prefer ERC-20 USDC (standard token) over native gas USDC.
     const chosen =
       usdcTokens.find((b) => b.token?.isNative === false) ?? usdcTokens[0] ?? null;
 
+    const onchainAmount = chosen ? parseFloat(chosen.amount) : 0;
+    const totalBalance = Math.round((onchainAmount + realStripeUsd) * 100) / 100;
+
     return {
-      usdc: chosen ? parseFloat(chosen.amount) : 0,
+      usdc: totalBalance,
+      cryptoUsdc: onchainAmount,
+      stripeUsd: realStripeUsd,
       tokenId: chosen?.token?.id ?? null,
-      walletId: wallet.circle_wallet_id,
+      walletId: wallet.circleWalletId,
       address: wallet.address,
     };
   } catch (err) {
-    console.error("[getOnchainBalance] read failed:", err);
+    console.warn("[getOnchainBalance] read fallback:", err);
     return {
-      usdc: 0,
+      usdc: realStripeUsd,
+      cryptoUsdc: 0,
+      stripeUsd: realStripeUsd,
       tokenId: null,
-      walletId: wallet.circle_wallet_id,
+      walletId: wallet.circleWalletId,
       address: wallet.address,
     };
   }

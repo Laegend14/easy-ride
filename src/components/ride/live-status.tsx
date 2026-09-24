@@ -15,6 +15,7 @@ import {
   type BookingState,
   type RecoveryState,
 } from "@/app/(app)/ride/actions";
+import { DisputeModal } from "@/components/disputes/dispute-modal";
 import type { RideStatusView } from "@/lib/payments/ride-status";
 
 const INITIAL: BookingState = { error: null };
@@ -23,6 +24,7 @@ const INITIAL_RECOVERY: RecoveryState = { error: null };
 export function LiveStatus({ initial }: { initial: RideStatusView }) {
   const router = useRouter();
   const [view, setView] = useState(initial);
+  const [disputeOpen, setDisputeOpen] = useState(false);
   const [trip, tripAction, settling] = useActionState(completeTrip, INITIAL);
   const [recovery, recoverAction, recovering] = useActionState(
     simulateCancellation,
@@ -202,13 +204,43 @@ export function LiveStatus({ initial }: { initial: RideStatusView }) {
           )}
         </div>
       ) : settled ? (
-        <p className="text-sm text-teal">
-          Trip complete. Your Protected Payment was released and a digital receipt
-          saved to Activity.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-teal">
+            Trip complete. Your Protected Payment was released and a digital receipt
+            saved to Activity.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setDisputeOpen(true)}
+            className="w-full text-xs text-[#f6c177] hover:bg-[#f6c177]/10"
+          >
+            Report an issue or dispute this trip
+          </Button>
+        </div>
       ) : cancelled && !recovery.recovered && !recovery.refunded ? (
-        <p className="text-sm text-muted">This ride was cancelled.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted">This ride was cancelled.</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setDisputeOpen(true)}
+            className="w-full text-xs text-[#f6c177] hover:bg-[#f6c177]/10"
+          >
+            Report an issue or dispute this cancellation
+          </Button>
+        </div>
       ) : null}
+
+      <DisputeModal
+        bookingId={view.booking.id}
+        provider={view.booking.provider}
+        fareCents={view.booking.fareCents}
+        isOpen={disputeOpen}
+        onClose={() => setDisputeOpen(false)}
+      />
     </GlassCard>
   );
 }

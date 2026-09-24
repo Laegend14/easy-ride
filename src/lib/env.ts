@@ -7,11 +7,10 @@ function required(name: string, value: string | undefined): string {
 
 // Public (browser-safe) env. Safe to import anywhere.
 export const publicEnv = {
-  supabaseUrl: required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL),
-  supabaseKey: required(
-    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  ),
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
+  firebaseApiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "easyride-52548",
 };
 
 // Server-only secrets. NEVER import this from a client component.
@@ -54,20 +53,9 @@ const REQUIRED_SERVER = [
   "CIRCLE_WALLET_SET_ID",
 ] as const;
 
-const REQUIRED_PUBLIC = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-] as const;
+const REQUIRED_PUBLIC = [] as const;
 
 /** Returns the list of missing required env vars (empty = all present). */
 export function missingEnv(): string[] {
   return [...REQUIRED_PUBLIC, ...REQUIRED_SERVER].filter((k) => !process.env[k]);
-}
-
-/** Throw if any required env var is missing — call from a startup/diagnostic. */
-export function validateEnvOrThrow(): void {
-  const missing = missingEnv();
-  if (missing.length) {
-    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
-  }
 }

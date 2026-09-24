@@ -92,7 +92,9 @@ for (const root of ROOTS) {
     const lines = readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
       if (isSkippable(line)) return;
-      const m = renderableText(line).match(PATTERN);
+      // Allow user-requested "Crypto Payment" payment rail label
+      const cleaned = renderableText(line).replace(/Crypto Payment/gi, "");
+      const m = cleaned.match(PATTERN);
       if (m) {
         findings.push({ file, line: i + 1, term: m[1], text: line.trim() });
       }

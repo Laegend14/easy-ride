@@ -7,26 +7,33 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
+  if (!supabaseUrl || !supabaseKey) {
+    return { supabaseResponse, user: null };
+  }
 
-  // IMPORTANT: do not run code between createServerClient and getUser().
-  // This refreshes the auth token and keeps the session alive.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options),
+          );
+        },
+      },
+    });
 
-  return { supabaseResponse, user };
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    return { supabaseResponse, user };
+  } catch {
+    // When Supabase is offline or migrating to Firebase, gracefully continue
+    return { supabaseResponse, user: null };
+  }
 };

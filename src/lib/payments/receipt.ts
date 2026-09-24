@@ -1,6 +1,6 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getRideBooking, getRideRequest } from "@/lib/firebase/db";
 import type { RideStatus } from "@/types/database";
 import { arcTxUrl, shortHash } from "@/lib/contracts/explorer";
 
@@ -43,51 +43,23 @@ function receiptNumber(bookingId: string): string {
 
 /** Owner-checked receipt for a ride. Every ride resolves to a receipt. */
 export async function getRideReceipt(bookingId: string): Promise<RideReceipt | null> {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) return null;
 
-  const { data: booking } = await supabase
-    .from("ride_bookings")
-    .select(
-      "id, user_id, ride_request_id, provider, fare_cents, status, booked_at, completed_at, created_at",
-    )
-    .eq("id", bookingId)
-    .single();
-  if (!booking || booking.user_id !== user.id) return null;
+  const booking = await getRideBooking(bookingId);
+  if (!booking || booking.userId !== fbUser.uid) return null;
 
-  const { data: req } = booking.ride_request_id
-    ? await supabase
-        .from("ride_requests")
-        .select("origin_address, destination_address")
-        .eq("id", booking.ride_request_id)
-        .single()
-    : { data: null };
-
-  const { data: escrow } = await supabase
-    .from("escrows")
-    .select("status, tx_hash_create, tx_hash_fund, tx_hash_settle")
-    .eq("ride_booking_id", bookingId)
-    .maybeSingle();
-
-  const { data: txns } = await supabase
-    .from("transactions")
-    .select("type, status, amount_cents")
-    .eq("ride_booking_id", bookingId);
-
-  const hasType = (t: string) => (txns ?? []).some((x) => x.type === t);
+  const req = booking.rideRequestId ? await getRideRequest(booking.rideRequestId) : null;
 
   // Determine receipt type.
   let receiptType: ReceiptType = "ride";
-  if (escrow?.status === "refunded" || hasType("refund")) {
+  if (booking.status === "REFUNDED") {
     receiptType = "refund";
-  } else if (booking.status === "SETTLED" || hasType("settlement")) {
+  } else if (booking.status === "SETTLED" || booking.status === "COMPLETED") {
     receiptType = "settlement";
   }
 
-  const fare = booking.fare_cents;
+  const fare = booking.fareCents;
   const lineItems: ReceiptLineItem[] = [
     { label: "Ride fare", amountCents: fare },
     { label: "Protected Payment hold", amountCents: fare },
@@ -107,25 +79,25 @@ export async function getRideReceipt(bookingId: string): Promise<RideReceipt | n
   // Verifiable payment records — each links to the public explorer. Ordered as
   // the money moved: opened → secured (rider funded) → released/refunded.
   const paymentRecords: PaymentRecord[] = [];
-  const addRecord = (label: string, hash: string | null) => {
+  const addRecord = (label: string, hash: string | null | undefined) => {
     if (hash) paymentRecords.push({ label, shortId: shortHash(hash), url: arcTxUrl(hash) });
   };
-  addRecord("Protected Payment opened", escrow?.tx_hash_create ?? null);
-  addRecord("Funds secured from your balance", escrow?.tx_hash_fund ?? null);
+  addRecord("Protected Payment opened", booking.txHashCreate);
+  addRecord("Funds secured from your balance", booking.txHashFund);
   if (receiptType === "refund") {
-    addRecord("Refunded to your balance", escrow?.tx_hash_settle ?? null);
+    addRecord("Refunded to your balance", booking.txHashSettle);
   } else {
-    addRecord("Released to provider", escrow?.tx_hash_settle ?? null);
+    addRecord("Released to provider", booking.txHashSettle);
   }
 
   return {
     receiptNo: receiptNumber(booking.id),
     receiptType,
-    issuedAt: booking.completed_at ?? booking.booked_at ?? booking.created_at,
+    issuedAt: booking.completedAt ?? booking.bookedAt ?? booking.createdAt,
     provider: booking.provider,
-    status: booking.status,
-    originAddress: req?.origin_address ?? null,
-    destinationAddress: req?.destination_address ?? null,
+    status: booking.status as RideStatus,
+    originAddress: req?.originAddress ?? null,
+    destinationAddress: req?.destinationAddress ?? null,
     fareCents: fare,
     lineItems,
     totalCents,

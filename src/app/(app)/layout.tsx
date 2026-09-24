@@ -1,35 +1,40 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getUserProfile } from "@/lib/firebase/db";
 import { ensureWallet } from "@/lib/circle/wallets";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { AppShell } from "@/components/app/app-shell";
+
+import { isDeveloperEmail } from "@/lib/auth/admin";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient(await cookies());
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const fbUser = await getCurrentFirebaseUser();
+  if (!fbUser) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed")
-    .eq("id", user.id)
-    .single();
-  if (!profile?.onboarding_completed) redirect("/onboarding");
+  const [profile] = await Promise.all([
+    getUserProfile(fbUser.uid),
+    ensureWallet().catch((err) => {
+      console.warn("[AppLayout] ensureWallet error:", err);
+      return null;
+    }),
+  ]);
 
-  // Provision the Easy Ride Balance on first entry to any app screen (idempotent).
-  await ensureWallet();
+  if (profile && !profile.onboardingCompleted) {
+    redirect("/onboarding");
+  }
+
+  const isDev = isDeveloperEmail(fbUser.email);
 
   return (
     <>
       <AuroraBackground />
-      <AppShell email={user.email ?? ""}>{children}</AppShell>
+      <AppShell email={fbUser.email ?? ""} isDev={isDev}>
+        {children}
+      </AppShell>
     </>
   );
 }
