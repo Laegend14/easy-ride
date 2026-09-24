@@ -75,11 +75,25 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       const res = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({
+          idToken,
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName,
+        }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        let errMsg = "Failed to establish session";
+        try {
+          const parsed = JSON.parse(text);
+          errMsg = parsed.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to establish session");
 
       if (data.onboardingCompleted) {
         router.push("/dashboard");
