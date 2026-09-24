@@ -1,10 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
-import { setFirebaseSessionCookie, clearFirebaseSessionCookie } from "@/lib/firebase/session";
+import { signSessionPayload } from "@/lib/firebase/session";
 import { getUserProfile, saveUserProfile, saveAgentPreferences } from "@/lib/firebase/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const COOKIE_NAME = "firebase_token";
 
 /**
  * Safely decodes an unverified JWT payload for fallback metadata extraction
@@ -31,8 +33,10 @@ export async function POST(req: NextRequest) {
     const { idToken, action, uid: clientUid, email: clientEmail, displayName: clientName } = body;
 
     if (action === "signout") {
-      await clearFirebaseSessionCookie();
-      return NextResponse.json({ ok: true });
+      const res = NextResponse.json({ ok: true });
+      res.cookies.delete(COOKIE_NAME);
+      res.cookies.delete("__session");
+      return res;
     }
 
     if (!idToken && !clientUid) {
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
     let email: string | null = null;
     let name: string | undefined = undefined;
 
-    // 1. First, attempt verification via Firebase REST API (works everywhere without service account keys)
+    // 1. First, attempt verification via Firebase REST API
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     if (apiKey && idToken && !apiKey.startsWith("AIzaSyDemo")) {
       try {
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Second, attempt verification via Firebase Admin SDK (if service account is available)
+    // 2. Second, attempt verification via Firebase Admin SDK if available
     if (!uid && idToken) {
       try {
         const auth = getAdminAuth();
@@ -107,22 +111,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unable to verify user identity." }, { status: 401 });
     }
 
-    // 5. Establish secure HTTP-only signed session cookie
-    await setFirebaseSessionCookie({
-      uid,
-      email,
-      displayName: name,
-    });
-
-    // 6. Gracefully check or initialize Firestore profile (non-blocking)
-    let onboardingCompleted = false;
+    // 5. Initialize or check Firestore / memory profile gracefully
+    let onboardingCompleted = true;
     try {
-      let profile = await getUserProfile(uid);
+      const profile = await getUserProfile(uid);
       if (!profile) {
-        profile = await saveUserProfile(uid, {
+        await saveUserProfile(uid, {
           email,
-          fullName: name || "",
-          onboardingCompleted: false,
+          fullName: name || clientName || "",
+          onboardingCompleted: true,
         });
 
         await saveAgentPreferences(uid, {
@@ -133,17 +130,36 @@ export async function POST(req: NextRequest) {
           premiumPreferred: false,
           sharedRideAllowed: true,
         });
+      } else {
+        onboardingCompleted = profile.onboardingCompleted ?? true;
       }
-      onboardingCompleted = Boolean(profile?.onboardingCompleted);
     } catch (dbErr) {
-      console.warn("[Session Route] Firestore profile check deferred:", dbErr);
+      console.warn("[Session Route] Profile setup deferred:", dbErr);
     }
 
-    return NextResponse.json({
+    // 6. Set signed session cookie directly on HTTP response
+    const token = signSessionPayload({
+      uid,
+      email,
+      displayName: name || clientName,
+      onboardingCompleted,
+    });
+
+    const res = NextResponse.json({
       ok: true,
       uid,
       onboardingCompleted,
     });
+
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 14, // 14 days
+    });
+
+    return res;
   } catch (err: any) {
     console.error("[Session Route Fatal Error]:", err);
     return NextResponse.json(
