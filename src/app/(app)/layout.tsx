@@ -26,7 +26,7 @@ export default async function AppLayout({
     }),
   ]);
 
-  if (profile && !profile.onboardingCompleted) {
+  if (profile && profile.onboardingCompleted === false && fbUser.onboardingCompleted !== true) {
     redirect("/onboarding");
   }
 

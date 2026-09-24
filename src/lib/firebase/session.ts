@@ -7,6 +7,7 @@ export interface FirebaseUserSession {
   uid: string;
   email: string | null;
   displayName: string | null;
+  onboardingCompleted?: boolean;
 }
 
 const SESSION_SECRET = process.env.FIREBASE_SESSION_SECRET || "easy-ride-secure-session-key-2026-production";
@@ -15,7 +16,12 @@ const COOKIE_NAME = "firebase_token";
 /**
  * Signs a session payload: base64(payload).signature
  */
-export function signSessionPayload(data: { uid: string; email: string; displayName?: string }): string {
+export function signSessionPayload(data: {
+  uid: string;
+  email: string;
+  displayName?: string;
+  onboardingCompleted?: boolean;
+}): string {
   const json = JSON.stringify({ ...data, ts: Date.now() });
   const b64 = Buffer.from(json).toString("base64url");
   const sig = createHmac("sha256", SESSION_SECRET).update(b64).digest("base64url");
@@ -40,6 +46,7 @@ export function verifySessionPayload(token: string): FirebaseUserSession | null 
       uid: data.uid,
       email: data.email ?? null,
       displayName: data.displayName ?? null,
+      onboardingCompleted: data.onboardingCompleted ?? undefined,
     };
   } catch {
     return null;
@@ -49,7 +56,12 @@ export function verifySessionPayload(token: string): FirebaseUserSession | null 
 /**
  * Sets session cookie for the authenticated user
  */
-export async function setFirebaseSessionCookie(session: { uid: string; email: string; displayName?: string }): Promise<void> {
+export async function setFirebaseSessionCookie(session: {
+  uid: string;
+  email: string;
+  displayName?: string;
+  onboardingCompleted?: boolean;
+}): Promise<void> {
   const cookieStore = await cookies();
   const token = signSessionPayload(session);
   cookieStore.set(COOKIE_NAME, token, {
@@ -88,23 +100,26 @@ export async function getCurrentFirebaseUser(): Promise<FirebaseUserSession | nu
       return signedSession;
     }
 
-    // 2. Try Firebase Admin ID token / session cookie verification
-    try {
-      const auth = getAdminAuth();
-      const decoded = await auth.verifyIdToken(token).catch(async () => {
-        return await auth.verifySessionCookie(token, true);
-      });
+    // 2. Try Firebase Admin ID token / session cookie verification (only if admin available)
+    const auth = getAdminAuth();
+    if (auth) {
+      try {
+        const decoded = await auth.verifyIdToken(token).catch(async () => {
+          return await auth.verifySessionCookie(token, true);
+        });
 
-      if (!decoded) return null;
+        if (!decoded) return null;
 
-      return {
-        uid: decoded.uid,
-        email: decoded.email ?? null,
-        displayName: (decoded as any).name ?? null,
-      };
-    } catch {
-      return null;
+        return {
+          uid: decoded.uid,
+          email: decoded.email ?? null,
+          displayName: (decoded as any).name ?? null,
+        };
+      } catch {
+        return null;
+      }
     }
+    return null;
   } catch (err) {
     console.warn("[getCurrentFirebaseUser] Error checking session:", err);
     return null;

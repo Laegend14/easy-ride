@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentFirebaseUser } from "@/lib/firebase/session";
+import { getCurrentFirebaseUser, setFirebaseSessionCookie } from "@/lib/firebase/session";
 import { saveUserProfile, saveAgentPreferences, saveUserDestinations } from "@/lib/firebase/db";
 import type { OptimizationGoal } from "@/types/database";
 
@@ -99,6 +99,13 @@ export async function completeOnboarding(
     console.error("[completeOnboarding] Firestore save error:", err);
   }
 
-  revalidatePath("/", "layout");
+  // Update session cookie with onboardingCompleted: true
+  await setFirebaseSessionCookie({
+    uid: userId,
+    email: fbUser.email || "",
+    displayName: fullName || fbUser.displayName || undefined,
+    onboardingCompleted: true,
+  });
+
   redirect("/dashboard");
 }

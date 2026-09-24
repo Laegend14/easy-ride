@@ -128,6 +128,9 @@ export async function updatePassword(
 
   try {
     const auth = getAdminAuth();
+    if (!auth) {
+      return { error: "Password updates via settings are only available when server admin credentials are configured." };
+    }
     await auth.updateUser(userId, { password });
   } catch (err: any) {
     return { error: err.message || "Failed to update password." };

@@ -27,15 +27,17 @@ export async function notify(
     }
 
     const db = getAdminFirestore();
-    await db.collection("notifications").add({
-      userId,
-      type: input.type,
-      title: input.title,
-      body: input.body ?? null,
-      rideBookingId: input.rideBookingId ?? null,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    if (db) {
+      await db.collection("notifications").add({
+        userId,
+        type: input.type,
+        title: input.title,
+        body: input.body ?? null,
+        rideBookingId: input.rideBookingId ?? null,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
   } catch (err) {
     console.warn("[notify] failed to write notification:", err);
   }

@@ -84,22 +84,24 @@ export async function verifyAndCreditCheckout(sessionId: string): Promise<{ succ
 
   const amountCents = session.amount_total || 0;
   const db = getAdminFirestore();
-  const depositRef = db.collection("stripe_deposits").doc(session.id);
-  const existing = await depositRef.get();
+  if (db) {
+    const depositRef = db.collection("stripe_deposits").doc(session.id);
+    const existing = await depositRef.get();
 
-  if (existing.exists) {
-    return { success: true, amountDollars: amountCents / 100, alreadyProcessed: true };
+    if (existing.exists) {
+      return { success: true, amountDollars: amountCents / 100, alreadyProcessed: true };
+    }
+
+    await depositRef.set({
+      sessionId: session.id,
+      userId: fbUser.uid,
+      customerEmail: session.customer_details?.email || fbUser.email || "",
+      amountCents,
+      currency: session.currency || "usd",
+      status: "paid",
+      createdAt: new Date().toISOString(),
+    });
   }
-
-  await depositRef.set({
-    sessionId: session.id,
-    userId: fbUser.uid,
-    customerEmail: session.customer_details?.email || fbUser.email || "",
-    amountCents,
-    currency: session.currency || "usd",
-    status: "paid",
-    createdAt: new Date().toISOString(),
-  });
 
   // Send deposit confirmation email via Resend
   const targetEmail = session.customer_details?.email || fbUser.email || "mueabraham16@gmail.com";
@@ -127,6 +129,7 @@ export async function verifyAndCreditCheckout(sessionId: string): Promise<{ succ
 export async function getVerifiedStripeDepositsTotal(userId: string): Promise<number> {
   try {
     const db = getAdminFirestore();
+    if (!db) return 0;
     const snap = await db
       .collection("stripe_deposits")
       .where("userId", "==", userId)

@@ -129,16 +129,18 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return cached.val;
   }
 
-  try {
-    const db = getAdminFirestore();
-    const doc = await db.collection("users").doc(uid).get();
-    if (doc.exists) {
-      const data = doc.data() as UserProfile;
-      memoryCache.profiles.set(uid, { val: data, cachedAt: Date.now() });
-      return data;
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const doc = await db.collection("users").doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data() as UserProfile;
+        memoryCache.profiles.set(uid, { val: data, cachedAt: Date.now() });
+        return data;
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for users collection:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for users collection:", err.message);
   }
   return cached?.val || null;
 }
@@ -162,11 +164,13 @@ export async function saveUserProfile(uid: string, profile: Partial<UserProfile>
 
   memoryCache.profiles.set(uid, { val: merged, cachedAt: Date.now() });
 
-  try {
-    const db = getAdminFirestore();
-    await db.collection("users").doc(uid).set(merged, { merge: true });
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for users collection:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      await db.collection("users").doc(uid).set(merged, { merge: true });
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for users collection:", err.message);
+    }
   }
 
   return merged;
@@ -181,16 +185,18 @@ export async function getAgentPreferences(uid: string): Promise<AgentPreferences
     return cached.val;
   }
 
-  try {
-    const db = getAdminFirestore();
-    const doc = await db.collection("agent_preferences").doc(uid).get();
-    if (doc.exists) {
-      const data = doc.data() as AgentPreferences;
-      memoryCache.preferences.set(uid, { val: data, cachedAt: Date.now() });
-      return data;
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const doc = await db.collection("agent_preferences").doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data() as AgentPreferences;
+        memoryCache.preferences.set(uid, { val: data, cachedAt: Date.now() });
+        return data;
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for agent_preferences:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for agent_preferences:", err.message);
   }
   return cached?.val || null;
 }
@@ -214,11 +220,13 @@ export async function saveAgentPreferences(uid: string, prefs: Partial<AgentPref
 
   memoryCache.preferences.set(uid, { val: merged, cachedAt: Date.now() });
 
-  try {
-    const db = getAdminFirestore();
-    await db.collection("agent_preferences").doc(uid).set(merged, { merge: true });
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for agent_preferences:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      await db.collection("agent_preferences").doc(uid).set(merged, { merge: true });
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for agent_preferences:", err.message);
+    }
   }
 
   return merged;
@@ -233,16 +241,18 @@ export async function getUserWallet(userId: string): Promise<UserWalletRecord | 
     return cached.val;
   }
 
-  try {
-    const db = getAdminFirestore();
-    const doc = await db.collection("wallets").doc(userId).get();
-    if (doc.exists) {
-      const data = doc.data() as UserWalletRecord;
-      memoryCache.wallets.set(userId, { val: data, cachedAt: Date.now() });
-      return data;
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const doc = await db.collection("wallets").doc(userId).get();
+      if (doc.exists) {
+        const data = doc.data() as UserWalletRecord;
+        memoryCache.wallets.set(userId, { val: data, cachedAt: Date.now() });
+        return data;
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for wallets:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for wallets:", err.message);
   }
   return cached?.val || null;
 }
@@ -266,11 +276,13 @@ export async function saveUserWallet(userId: string, data: Partial<UserWalletRec
 
   memoryCache.wallets.set(userId, { val: merged, cachedAt: Date.now() });
 
-  try {
-    const db = getAdminFirestore();
-    await db.collection("wallets").doc(userId).set(merged, { merge: true });
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for wallets:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      await db.collection("wallets").doc(userId).set(merged, { merge: true });
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for wallets:", err.message);
+    }
   }
 
   return merged;
@@ -282,16 +294,18 @@ export async function saveUserWallet(userId: string, data: Partial<UserWalletRec
 export async function saveUserDestinations(uid: string, destinations: SavedDestination[]): Promise<void> {
   memoryCache.destinations.set(uid, { val: destinations, cachedAt: Date.now() });
 
-  try {
-    const db = getAdminFirestore();
-    const batch = db.batch();
-    for (const d of destinations) {
-      const docRef = db.collection("destinations").doc(`${uid}_${d.kind}`);
-      batch.set(docRef, { ...d, userId: uid, createdAt: new Date().toISOString() });
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const batch = db.batch();
+      for (const d of destinations) {
+        const docRef = db.collection("destinations").doc(`${uid}_${d.kind}`);
+        batch.set(docRef, { ...d, userId: uid, createdAt: new Date().toISOString() });
+      }
+      await batch.commit();
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for destinations:", err.message);
     }
-    await batch.commit();
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for destinations:", err.message);
   }
 }
 
@@ -300,11 +314,13 @@ export async function saveUserDestinations(uid: string, destinations: SavedDesti
  */
 export async function saveRideRequest(req: RideRequestRecord): Promise<void> {
   memoryCache.requests.set(req.id, req);
-  try {
-    const db = getAdminFirestore();
-    await db.collection("ride_requests").doc(req.id).set(req, { merge: true });
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for ride_requests:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      await db.collection("ride_requests").doc(req.id).set(req, { merge: true });
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for ride_requests:", err.message);
+    }
   }
 }
 
@@ -312,12 +328,14 @@ export async function saveRideRequest(req: RideRequestRecord): Promise<void> {
  * Gets ride request
  */
 export async function getRideRequest(id: string): Promise<RideRequestRecord | null> {
-  try {
-    const db = getAdminFirestore();
-    const doc = await db.collection("ride_requests").doc(id).get();
-    if (doc.exists) return doc.data() as RideRequestRecord;
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for ride_requests:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const doc = await db.collection("ride_requests").doc(id).get();
+      if (doc.exists) return doc.data() as RideRequestRecord;
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for ride_requests:", err.message);
+    }
   }
   return memoryCache.requests.get(id) || null;
 }
@@ -327,16 +345,18 @@ export async function getRideRequest(id: string): Promise<RideRequestRecord | nu
  */
 export async function saveRideQuotes(rideRequestId: string, quotes: RideQuoteRecord[]): Promise<void> {
   memoryCache.quotes.set(rideRequestId, quotes);
-  try {
-    const db = getAdminFirestore();
-    const batch = db.batch();
-    for (const q of quotes) {
-      const docRef = db.collection("ride_quotes").doc(q.id);
-      batch.set(docRef, q, { merge: true });
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const batch = db.batch();
+      for (const q of quotes) {
+        const docRef = db.collection("ride_quotes").doc(q.id);
+        batch.set(docRef, q, { merge: true });
+      }
+      await batch.commit();
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for ride_quotes:", err.message);
     }
-    await batch.commit();
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for ride_quotes:", err.message);
   }
 }
 
@@ -344,14 +364,16 @@ export async function saveRideQuotes(rideRequestId: string, quotes: RideQuoteRec
  * Gets ride quotes
  */
 export async function getRideQuotes(rideRequestId: string): Promise<RideQuoteRecord[]> {
-  try {
-    const db = getAdminFirestore();
-    const snap = await db.collection("ride_quotes").where("rideRequestId", "==", rideRequestId).get();
-    if (!snap.empty) {
-      return snap.docs.map((d) => d.data() as RideQuoteRecord);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const snap = await db.collection("ride_quotes").where("rideRequestId", "==", rideRequestId).get();
+      if (!snap.empty) {
+        return snap.docs.map((d) => d.data() as RideQuoteRecord);
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for ride_quotes:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for ride_quotes:", err.message);
   }
   return memoryCache.quotes.get(rideRequestId) || [];
 }
@@ -373,16 +395,18 @@ export async function setSelectedQuote(rideRequestId: string, quoteId: string): 
 export async function saveRideBooking(booking: RideBookingRecord): Promise<void> {
   memoryCache.bookings.set(booking.id, booking);
 
-  try {
-    const db = getAdminFirestore();
-    await db.collection("ride_bookings").doc(booking.id).set(booking, { merge: true });
-    await db.collection("ride_lifecycle_events").add({
-      rideBookingId: booking.id,
-      status: booking.status,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (err: any) {
-    console.warn("[Firestore] Write error for ride_bookings:", err.message);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      await db.collection("ride_bookings").doc(booking.id).set(booking, { merge: true });
+      await db.collection("ride_lifecycle_events").add({
+        rideBookingId: booking.id,
+        status: booking.status,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.warn("[Firestore] Write error for ride_bookings:", err.message);
+    }
   }
 }
 
@@ -390,14 +414,16 @@ export async function saveRideBooking(booking: RideBookingRecord): Promise<void>
  * Retrieves a ride booking from Firestore
  */
 export async function getRideBooking(bookingId: string): Promise<RideBookingRecord | null> {
-  try {
-    const db = getAdminFirestore();
-    const doc = await db.collection("ride_bookings").doc(bookingId).get();
-    if (doc.exists) {
-      return doc.data() as RideBookingRecord;
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const doc = await db.collection("ride_bookings").doc(bookingId).get();
+      if (doc.exists) {
+        return doc.data() as RideBookingRecord;
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for ride_bookings:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for ride_bookings:", err.message);
   }
   return memoryCache.bookings.get(bookingId) || null;
 }
@@ -406,14 +432,16 @@ export async function getRideBooking(bookingId: string): Promise<RideBookingReco
  * Retrieves active or recent bookings for a user
  */
 export async function getUserBookings(uid: string): Promise<RideBookingRecord[]> {
-  try {
-    const db = getAdminFirestore();
-    const snapshot = await db.collection("ride_bookings").where("userId", "==", uid).get();
-    if (!snapshot.empty) {
-      return snapshot.docs.map((doc) => doc.data() as RideBookingRecord);
+  const db = getAdminFirestore();
+  if (db) {
+    try {
+      const snapshot = await db.collection("ride_bookings").where("userId", "==", uid).get();
+      if (!snapshot.empty) {
+        return snapshot.docs.map((doc) => doc.data() as RideBookingRecord);
+      }
+    } catch (err: any) {
+      console.warn("[Firestore] Read error for getUserBookings:", err.message);
     }
-  } catch (err: any) {
-    console.warn("[Firestore] Read error for getUserBookings:", err.message);
   }
 
   const results: RideBookingRecord[] = [];

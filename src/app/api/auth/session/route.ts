@@ -73,11 +73,13 @@ export async function POST(req: NextRequest) {
     if (!uid && idToken) {
       try {
         const auth = getAdminAuth();
-        const decoded = await auth.verifyIdToken(idToken);
-        if (decoded?.uid) {
-          uid = decoded.uid;
-          email = decoded.email || null;
-          name = decoded.name || undefined;
+        if (auth) {
+          const decoded = await auth.verifyIdToken(idToken);
+          if (decoded?.uid) {
+            uid = decoded.uid;
+            email = decoded.email || null;
+            name = decoded.name || undefined;
+          }
         }
       } catch (adminErr) {
         console.warn("[Session Route] Firebase Admin verifyIdToken skipped/failed:", adminErr);
