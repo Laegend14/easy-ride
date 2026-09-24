@@ -8,9 +8,13 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check Firebase session
-  const fbUser = await getCurrentFirebaseUser();
-  if (fbUser) redirect("/dashboard");
+  // Check Firebase session safely
+  try {
+    const fbUser = await getCurrentFirebaseUser();
+    if (fbUser) redirect("/dashboard");
+  } catch (err) {
+    console.warn("[AuthLayout] Session check skipped:", err);
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-20">

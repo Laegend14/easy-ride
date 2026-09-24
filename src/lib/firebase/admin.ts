@@ -10,7 +10,21 @@ function getAdminApp(): App {
     return getApp();
   }
 
-  // 1. Try local service account file first (most reliable for private key format)
+  // 1. Try full service account JSON from environment variable (ideal for Vercel)
+  const envServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (envServiceAccount) {
+    try {
+      const sa = JSON.parse(envServiceAccount);
+      return initializeApp({
+        credential: cert(sa),
+        projectId: sa.project_id || "easyride-52548",
+      });
+    } catch (err) {
+      console.warn("[Firebase Admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY from env:", err);
+    }
+  }
+
+  // 2. Try local service account file first (most reliable for local dev)
   const serviceAccountPath = resolve(process.cwd(), "firebase-service-account.json");
   if (existsSync(serviceAccountPath)) {
     try {
@@ -24,7 +38,7 @@ function getAdminApp(): App {
     }
   }
 
-  // 2. Try environment variables
+  // 3. Try separate environment variables
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "easyride-52548";
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -44,7 +58,7 @@ function getAdminApp(): App {
     });
   }
 
-  // 3. Fallback to project ID default
+  // 4. Fallback to project ID default
   return initializeApp({
     projectId,
   });
@@ -54,12 +68,22 @@ export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
 }
 
+let firestoreInstance: Firestore | null = null;
+
 export function getAdminFirestore(): Firestore {
+  if (firestoreInstance) return firestoreInstance;
+
   const app = getAdminApp();
   const dbId = process.env.FIREBASE_DATABASE_ID || "default";
   try {
-    return getFirestore(app, dbId);
+    firestoreInstance = getFirestore(app, dbId);
   } catch {
-    return getFirestore(app);
+    firestoreInstance = getFirestore(app);
   }
+
+  try {
+    firestoreInstance.settings({ ignoreUndefinedProperties: true });
+  } catch {}
+
+  return firestoreInstance;
 }

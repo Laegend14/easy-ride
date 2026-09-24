@@ -74,32 +74,39 @@ export async function clearFirebaseSessionCookie(): Promise<void> {
  * Retrieves the currently logged-in user from the session cookie
  */
 export async function getCurrentFirebaseUser(): Promise<FirebaseUserSession | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value || cookieStore.get("__session")?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  // 1. Try custom signed session token
-  const signedSession = verifySessionPayload(token);
-  if (signedSession) {
-    return signedSession;
-  }
-
-  // 2. Try Firebase Admin ID token / session cookie verification
   try {
-    const auth = getAdminAuth();
-    const decoded = await auth.verifyIdToken(token).catch(async () => {
-      return await auth.verifySessionCookie(token, true);
-    });
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value || cookieStore.get("__session")?.value;
 
-    return {
-      uid: decoded.uid,
-      email: decoded.email ?? null,
-      displayName: (decoded as any).name ?? null,
-    };
-  } catch {
+    if (!token) {
+      return null;
+    }
+
+    // 1. Try custom signed session token
+    const signedSession = verifySessionPayload(token);
+    if (signedSession) {
+      return signedSession;
+    }
+
+    // 2. Try Firebase Admin ID token / session cookie verification
+    try {
+      const auth = getAdminAuth();
+      const decoded = await auth.verifyIdToken(token).catch(async () => {
+        return await auth.verifySessionCookie(token, true);
+      });
+
+      if (!decoded) return null;
+
+      return {
+        uid: decoded.uid,
+        email: decoded.email ?? null,
+        displayName: (decoded as any).name ?? null,
+      };
+    } catch {
+      return null;
+    }
+  } catch (err) {
+    console.warn("[getCurrentFirebaseUser] Error checking session:", err);
     return null;
   }
 }
