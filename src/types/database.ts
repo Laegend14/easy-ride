@@ -13,7 +13,8 @@ export type RideStatus =
   | "IN_PROGRESS"
   | "COMPLETED"
   | "SETTLED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REFUNDED";
 
 export type EscrowStatus = "created" | "funded" | "released" | "refunded" | "reassigned";
 

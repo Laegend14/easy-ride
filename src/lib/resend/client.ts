@@ -77,10 +77,11 @@ async function sendEmailSafely(params: {
     if (error) {
       const errorMsg = error.message || "";
       // If restricted to sending only to the account owner email in free sandbox
+      const errName = String(error.name);
       if (
         (errorMsg.includes("testing emails to your own email address") ||
-          error.name === "validation_error" ||
-          error.name === "forbidden") &&
+          errName === "validation_error" ||
+          errName === "forbidden") &&
         primaryRecipient !== "mueabraham16@gmail.com"
       ) {
         console.warn(

@@ -8,6 +8,9 @@ export interface UserProfile {
   homeAddress?: string;
   workAddress?: string;
   onboardingCompleted: boolean;
+  notifyRideUpdates?: boolean;
+  notifyDisputes?: boolean;
+  notifyPromotions?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -82,6 +85,13 @@ export interface RideBookingRecord {
   escrowTxHash?: string;
   pickupAddress?: string;
   dropoffAddress?: string;
+  escrowId?: string | null;
+  txHashCreate?: string | null;
+  txHashFund?: string | null;
+  txHashSettle?: string | null;
+  createdAt?: string;
+  isReassignment?: boolean;
+  previousBookingId?: string;
 }
 
 export interface RideLifecycleEventRecord {
@@ -270,7 +280,7 @@ export async function saveUserWallet(userId: string, data: Partial<UserWalletRec
  * Saves user destinations
  */
 export async function saveUserDestinations(uid: string, destinations: SavedDestination[]): Promise<void> {
-  memoryCache.destinations.set(uid, destinations);
+  memoryCache.destinations.set(uid, { val: destinations, cachedAt: Date.now() });
 
   try {
     const db = getAdminFirestore();

@@ -158,7 +158,7 @@ export function RideHistorySlider({ rides }: RideHistorySliderProps) {
       </div>
 
       {/* Main Slide Card Container */}
-      {!hasRides ? (
+      {!currentRide ? (
         /* Empty State Card */
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-surface/60 backdrop-blur-xl p-8 text-center space-y-4 shadow-xl">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-teal/10 border border-teal/20 flex items-center justify-center text-teal shadow-lg shadow-teal/10">
