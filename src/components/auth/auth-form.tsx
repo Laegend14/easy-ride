@@ -90,6 +90,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       console.error("Google sign in error:", err);
       if (err.code === "auth/popup-closed-by-user") {
         setClientError("Google sign-in was cancelled.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        const domain = typeof window !== "undefined" ? window.location.hostname : "this domain";
+        setClientError(
+          `Domain "${domain}" is not authorized in Firebase. Please add "${domain}" to Firebase Console → Authentication → Settings → Authorized domains.`
+        );
       } else {
         setClientError(err.message || "Failed to sign in with Google.");
       }
@@ -118,7 +123,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setLinkSentSuccess(true);
     } catch (err: any) {
       console.error("Send email link error:", err);
-      setClientError(err.message || "Failed to send sign-in link.");
+      if (err.code === "auth/unauthorized-domain") {
+        const domain = typeof window !== "undefined" ? window.location.hostname : "this domain";
+        setClientError(
+          `Domain "${domain}" is not authorized in Firebase. Please add "${domain}" to Firebase Console → Authentication → Settings → Authorized domains.`
+        );
+      } else {
+        setClientError(err.message || "Failed to send sign-in link.");
+      }
     } finally {
       setLinkSending(false);
     }
