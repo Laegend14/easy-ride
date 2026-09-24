@@ -12,7 +12,7 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login, signup, type AuthState } from "@/app/(auth)/actions";
+import { login, signup, establishGoogleSession, type AuthState } from "@/app/(auth)/actions";
 
 const INITIAL: AuthState = { error: null };
 
@@ -69,33 +69,19 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       provider.setCustomParameters({ prompt: "select_account" });
 
       const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
 
-      // Establish session
-      const res = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idToken,
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-        }),
+      // Establish session directly via server action (infallible, serverless-native)
+      const sessionResult = await establishGoogleSession({
+        uid: result.user.uid,
+        email: result.user.email || "",
+        displayName: result.user.displayName || undefined,
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        let errMsg = "Failed to establish session";
-        try {
-          const parsed = JSON.parse(text);
-          errMsg = parsed.error || errMsg;
-        } catch {}
-        throw new Error(errMsg);
+      if (sessionResult.error) {
+        throw new Error(sessionResult.error);
       }
 
-      const data = await res.json();
-
-      if (data.onboardingCompleted) {
+      if (sessionResult.onboardingCompleted) {
         router.push("/dashboard");
       } else {
         router.push("/onboarding");

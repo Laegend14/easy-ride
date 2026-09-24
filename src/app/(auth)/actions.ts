@@ -147,3 +147,55 @@ export async function signOut() {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+export async function establishGoogleSession(data: {
+  uid: string;
+  email: string;
+  displayName?: string;
+}): Promise<{ ok?: boolean; error?: string; onboardingCompleted?: boolean }> {
+  const { uid, email, displayName } = data;
+  if (!uid || !email) {
+    return { error: "Missing user credentials." };
+  }
+
+  try {
+    // 1. Set secure HTTP-only signed session cookie
+    await setFirebaseSessionCookie({
+      uid,
+      email,
+      displayName,
+    });
+
+    // 2. Initialize or check Firestore profile gracefully
+    let onboardingCompleted = false;
+    try {
+      let profile = await getUserProfile(uid);
+      if (!profile) {
+        profile = await saveUserProfile(uid, {
+          email,
+          fullName: displayName || "",
+          onboardingCompleted: false,
+        });
+
+        await saveAgentPreferences(uid, {
+          optimizationGoal: "balanced",
+          dailyBudgetCents: 5000,
+          maxRideCents: 2000,
+          evPreferred: false,
+          premiumPreferred: false,
+          sharedRideAllowed: true,
+        });
+      }
+      onboardingCompleted = Boolean(profile?.onboardingCompleted);
+    } catch (dbErr) {
+      console.warn("[Google Session] Profile setup deferred:", dbErr);
+    }
+
+    revalidatePath("/", "layout");
+    return { ok: true, onboardingCompleted };
+  } catch (err: any) {
+    console.error("[establishGoogleSession error]:", err);
+    return { error: err?.message || "Failed to establish session" };
+  }
+}
+
