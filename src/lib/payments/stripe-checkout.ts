@@ -83,7 +83,7 @@ export async function verifyAndCreditCheckout(sessionId: string): Promise<{ succ
   }
 
   const amountCents = session.amount_total || 0;
-  const db = getAdminFirestore();
+  const db = await getAdminFirestore();
   if (db) {
     const depositRef = db.collection("stripe_deposits").doc(session.id);
     const existing = await depositRef.get();
@@ -128,7 +128,7 @@ export async function verifyAndCreditCheckout(sessionId: string): Promise<{ succ
  */
 export async function getVerifiedStripeDepositsTotal(userId: string): Promise<number> {
   try {
-    const db = getAdminFirestore();
+    const db = await getAdminFirestore();
     if (!db) return 0;
     const snap = await db
       .collection("stripe_deposits")
@@ -137,7 +137,7 @@ export async function getVerifiedStripeDepositsTotal(userId: string): Promise<nu
       .get();
 
     let totalCents = 0;
-    snap.forEach((doc) => {
+    snap.forEach((doc: any) => {
       const data = doc.data();
       totalCents += Number(data.amountCents || 0);
     });

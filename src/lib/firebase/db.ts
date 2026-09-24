@@ -1,5 +1,5 @@
 import "server-only";
-import { getAdminFirestore } from "./admin";
+import { getAdminFirestore, hasAdminCredentials } from "./admin";
 
 export interface UserProfile {
   uid: string;
@@ -129,7 +129,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return cached.val;
   }
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const doc = await db.collection("users").doc(uid).get();
@@ -164,7 +164,7 @@ export async function saveUserProfile(uid: string, profile: Partial<UserProfile>
 
   memoryCache.profiles.set(uid, { val: merged, cachedAt: Date.now() });
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       await db.collection("users").doc(uid).set(merged, { merge: true });
@@ -185,7 +185,7 @@ export async function getAgentPreferences(uid: string): Promise<AgentPreferences
     return cached.val;
   }
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const doc = await db.collection("agent_preferences").doc(uid).get();
@@ -220,7 +220,7 @@ export async function saveAgentPreferences(uid: string, prefs: Partial<AgentPref
 
   memoryCache.preferences.set(uid, { val: merged, cachedAt: Date.now() });
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       await db.collection("agent_preferences").doc(uid).set(merged, { merge: true });
@@ -241,7 +241,7 @@ export async function getUserWallet(userId: string): Promise<UserWalletRecord | 
     return cached.val;
   }
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const doc = await db.collection("wallets").doc(userId).get();
@@ -276,7 +276,7 @@ export async function saveUserWallet(userId: string, data: Partial<UserWalletRec
 
   memoryCache.wallets.set(userId, { val: merged, cachedAt: Date.now() });
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       await db.collection("wallets").doc(userId).set(merged, { merge: true });
@@ -294,7 +294,7 @@ export async function saveUserWallet(userId: string, data: Partial<UserWalletRec
 export async function saveUserDestinations(uid: string, destinations: SavedDestination[]): Promise<void> {
   memoryCache.destinations.set(uid, { val: destinations, cachedAt: Date.now() });
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const batch = db.batch();
@@ -314,7 +314,7 @@ export async function saveUserDestinations(uid: string, destinations: SavedDesti
  */
 export async function saveRideRequest(req: RideRequestRecord): Promise<void> {
   memoryCache.requests.set(req.id, req);
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       await db.collection("ride_requests").doc(req.id).set(req, { merge: true });
@@ -328,7 +328,7 @@ export async function saveRideRequest(req: RideRequestRecord): Promise<void> {
  * Gets ride request
  */
 export async function getRideRequest(id: string): Promise<RideRequestRecord | null> {
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const doc = await db.collection("ride_requests").doc(id).get();
@@ -345,7 +345,7 @@ export async function getRideRequest(id: string): Promise<RideRequestRecord | nu
  */
 export async function saveRideQuotes(rideRequestId: string, quotes: RideQuoteRecord[]): Promise<void> {
   memoryCache.quotes.set(rideRequestId, quotes);
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const batch = db.batch();
@@ -364,7 +364,7 @@ export async function saveRideQuotes(rideRequestId: string, quotes: RideQuoteRec
  * Gets ride quotes
  */
 export async function getRideQuotes(rideRequestId: string): Promise<RideQuoteRecord[]> {
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const snap = await db.collection("ride_quotes").where("rideRequestId", "==", rideRequestId).get();
@@ -395,7 +395,7 @@ export async function setSelectedQuote(rideRequestId: string, quoteId: string): 
 export async function saveRideBooking(booking: RideBookingRecord): Promise<void> {
   memoryCache.bookings.set(booking.id, booking);
 
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       await db.collection("ride_bookings").doc(booking.id).set(booking, { merge: true });
@@ -414,7 +414,7 @@ export async function saveRideBooking(booking: RideBookingRecord): Promise<void>
  * Retrieves a ride booking from Firestore
  */
 export async function getRideBooking(bookingId: string): Promise<RideBookingRecord | null> {
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const doc = await db.collection("ride_bookings").doc(bookingId).get();
@@ -432,7 +432,7 @@ export async function getRideBooking(bookingId: string): Promise<RideBookingReco
  * Retrieves active or recent bookings for a user
  */
 export async function getUserBookings(uid: string): Promise<RideBookingRecord[]> {
-  const db = getAdminFirestore();
+  const db = hasAdminCredentials() ? await getAdminFirestore() : null;
   if (db) {
     try {
       const snapshot = await db.collection("ride_bookings").where("userId", "==", uid).get();

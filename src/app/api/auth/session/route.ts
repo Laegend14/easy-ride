@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // 2. Second, attempt verification via Firebase Admin SDK if available
     if (!uid && idToken) {
       try {
-        const auth = getAdminAuth();
+        const auth = await getAdminAuth();
         if (auth) {
           const decoded = await auth.verifyIdToken(idToken);
           if (decoded?.uid) {

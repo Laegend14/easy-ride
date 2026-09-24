@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { getAdminAuth } from "./admin";
+import { getAdminAuth, hasAdminCredentials } from "./admin";
 
 export interface FirebaseUserSession {
   uid: string;
@@ -101,22 +101,24 @@ export async function getCurrentFirebaseUser(): Promise<FirebaseUserSession | nu
     }
 
     // 2. Try Firebase Admin ID token / session cookie verification (only if admin available)
-    const auth = getAdminAuth();
-    if (auth) {
-      try {
-        const decoded = await auth.verifyIdToken(token).catch(async () => {
-          return await auth.verifySessionCookie(token, true);
-        });
+    if (hasAdminCredentials()) {
+      const auth = await getAdminAuth();
+      if (auth) {
+        try {
+          const decoded = await auth.verifyIdToken(token).catch(async () => {
+            return await auth.verifySessionCookie(token, true);
+          });
 
-        if (!decoded) return null;
+          if (!decoded) return null;
 
-        return {
-          uid: decoded.uid,
-          email: decoded.email ?? null,
-          displayName: (decoded as any).name ?? null,
-        };
-      } catch {
-        return null;
+          return {
+            uid: decoded.uid,
+            email: decoded.email ?? null,
+            displayName: (decoded as any).name ?? null,
+          };
+        } catch {
+          return null;
+        }
       }
     }
     return null;

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getAdminAuth } from "@/lib/firebase/admin";
+import { getAdminAuth, hasAdminCredentials } from "@/lib/firebase/admin";
 import { setFirebaseSessionCookie, clearFirebaseSessionCookie } from "@/lib/firebase/session";
 import { getUserProfile, saveUserProfile, saveAgentPreferences } from "@/lib/firebase/db";
 
@@ -51,8 +51,8 @@ export async function login(
     }
 
     // If REST API didn't authenticate, check with Firebase Admin if available
-    if (!uid) {
-      const auth = getAdminAuth();
+    if (!uid && hasAdminCredentials()) {
+      const auth = await getAdminAuth();
       if (auth) {
         const user = await auth.getUserByEmail(email).catch(() => null);
         if (user) {
@@ -126,8 +126,11 @@ export async function signup(
 
   // 2. Fallback to Firebase Admin if REST didn't provide uid
   if (!uid) {
+    if (!hasAdminCredentials()) {
+      return { error: "Account registration is temporarily unavailable. Please use Continue with Google." };
+    }
     try {
-      const auth = getAdminAuth();
+      const auth = await getAdminAuth();
       if (!auth) {
         return { error: "Account registration is temporarily unavailable. Please use Continue with Google." };
       }

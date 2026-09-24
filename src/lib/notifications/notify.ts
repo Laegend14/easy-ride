@@ -26,7 +26,7 @@ export async function notify(
       if (prof && prof.notifyRideUpdates === false) return;
     }
 
-    const db = getAdminFirestore();
+    const db = await getAdminFirestore();
     if (db) {
       await db.collection("notifications").add({
         userId,

@@ -127,7 +127,7 @@ export async function updatePassword(
   if (!rl.ok) return { error: rl.error };
 
   try {
-    const auth = getAdminAuth();
+    const auth = await getAdminAuth();
     if (!auth) {
       return { error: "Password updates via settings are only available when server admin credentials are configured." };
     }
