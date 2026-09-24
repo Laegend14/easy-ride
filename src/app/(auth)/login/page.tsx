@@ -1,6 +1,9 @@
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LoginPage({
   searchParams,
 }: {

@@ -3,17 +3,25 @@ import { redirect } from "next/navigation";
 import { getCurrentFirebaseUser } from "@/lib/firebase/session";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   // Check Firebase session safely
+  let shouldRedirect = false;
   try {
     const fbUser = await getCurrentFirebaseUser();
-    if (fbUser) redirect("/dashboard");
+    if (fbUser) shouldRedirect = true;
   } catch (err) {
     console.warn("[AuthLayout] Session check skipped:", err);
+  }
+
+  if (shouldRedirect) {
+    redirect("/dashboard");
   }
 
   return (

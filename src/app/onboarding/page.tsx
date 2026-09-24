@@ -8,6 +8,9 @@ import {
 } from "@/components/onboarding/onboarding-wizard";
 import type { OptimizationGoal } from "@/types/database";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function OnboardingPage() {
   const fbUser = await getCurrentFirebaseUser();
   if (!fbUser) redirect("/login");

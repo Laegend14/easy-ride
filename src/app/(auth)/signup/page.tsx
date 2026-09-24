@@ -1,5 +1,8 @@
 import { AuthForm } from "@/components/auth/auth-form";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function SignupPage() {
   return (
     <div>

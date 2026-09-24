@@ -7,6 +7,9 @@ import { AppShell } from "@/components/app/app-shell";
 
 import { isDeveloperEmail } from "@/lib/auth/admin";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AppLayout({
   children,
 }: {
