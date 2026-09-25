@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentFirebaseUser } from "@/lib/firebase/session";
-import { getUserProfile, getAgentPreferences } from "@/lib/firebase/db";
+import { getUserProfile, getAgentPreferences, getUserWallet } from "@/lib/firebase/db";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import {
   OnboardingWizard,
@@ -15,8 +15,13 @@ export default async function OnboardingPage() {
   const fbUser = await getCurrentFirebaseUser();
   if (!fbUser) redirect("/login");
 
+  if (fbUser.onboardingCompleted) redirect("/dashboard");
+
   const profile = await getUserProfile(fbUser.uid);
   if (profile?.onboardingCompleted) redirect("/dashboard");
+
+  const wallet = await getUserWallet(fbUser.uid);
+  if (wallet?.circleWalletId) redirect("/dashboard");
 
   const prefs = await getAgentPreferences(fbUser.uid);
 

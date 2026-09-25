@@ -1,5 +1,6 @@
 import "server-only";
 import { getAdminFirestore, hasAdminCredentials } from "./admin";
+import { getCircleClient } from "@/lib/circle/client";
 
 export interface UserProfile {
   uid: string;
@@ -142,6 +143,32 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       console.warn("[Firestore] Read error for users collection:", err.message);
     }
   }
+
+  // Fallback to Circle Developer-Controlled Wallets to detect existing onboarded user
+  try {
+    const circle = getCircleClient();
+    const res = await circle.listWallets({ refId: uid });
+    const wallets = res.data?.wallets || [];
+    if (wallets.length > 0) {
+      wallets.sort((a, b) => new Date(a.createDate).getTime() - new Date(b.createDate).getTime());
+      const primary = wallets[0];
+      const name = primary.name && primary.name.trim() !== "" ? primary.name : undefined;
+      const profile: UserProfile = {
+        uid,
+        email: "",
+        fullName: name,
+        homeAddress: "San Francisco, CA",
+        onboardingCompleted: true,
+        createdAt: primary.createDate || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryCache.profiles.set(uid, { val: profile, cachedAt: Date.now() });
+      return profile;
+    }
+  } catch (circleErr) {
+    // Ignore circle query error
+  }
+
   return cached?.val || null;
 }
 
@@ -170,6 +197,24 @@ export async function saveUserProfile(uid: string, profile: Partial<UserProfile>
       await db.collection("users").doc(uid).set(merged, { merge: true });
     } catch (err: any) {
       console.warn("[Firestore] Write error for users collection:", err.message);
+    }
+  }
+
+  // Sync user's name to their Circle wallet if available
+  if (merged.fullName) {
+    try {
+      const circle = getCircleClient();
+      const res = await circle.listWallets({ refId: uid });
+      const wallets = res.data?.wallets || [];
+      if (wallets.length > 0) {
+        wallets.sort((a, b) => new Date(a.createDate).getTime() - new Date(b.createDate).getTime());
+        const primary = wallets[0];
+        if (primary.name !== merged.fullName) {
+          await circle.updateWallet({ id: primary.id, name: merged.fullName });
+        }
+      }
+    } catch (syncErr) {
+      console.warn("[Circle] Wallet name sync error:", syncErr);
     }
   }
 
@@ -254,6 +299,32 @@ export async function getUserWallet(userId: string): Promise<UserWalletRecord | 
       console.warn("[Firestore] Read error for wallets:", err.message);
     }
   }
+
+  // Fallback to Circle Developer-Controlled Wallets query by refId
+  try {
+    const circle = getCircleClient();
+    const res = await circle.listWallets({ refId: userId });
+    const wallets = res.data?.wallets || [];
+    if (wallets.length > 0) {
+      wallets.sort((a, b) => new Date(a.createDate).getTime() - new Date(b.createDate).getTime());
+      const primary = wallets[0];
+      const record: UserWalletRecord = {
+        userId,
+        status: "active",
+        balanceCents: 0,
+        address: primary.address ?? null,
+        blockchain: primary.blockchain ?? "ARC-TESTNET",
+        circleWalletId: primary.id,
+        createdAt: primary.createDate || new Date().toISOString(),
+        updatedAt: primary.updateDate || new Date().toISOString(),
+      };
+      memoryCache.wallets.set(userId, { val: record, cachedAt: Date.now() });
+      return record;
+    }
+  } catch (circleErr) {
+    console.warn("[Circle] Wallet query error in getUserWallet:", circleErr);
+  }
+
   return cached?.val || null;
 }
 

@@ -62,6 +62,23 @@ export async function ensureWallet(): Promise<WalletSummary | null> {
 
   try {
     const circle = getCircleClient();
+
+    // Check if user already has a wallet registered in Circle
+    const existing = await circle.listWallets({ refId: fbUser.uid });
+    const existingWallets = existing.data?.wallets || [];
+    if (existingWallets.length > 0) {
+      existingWallets.sort((a, b) => new Date(a.createDate).getTime() - new Date(b.createDate).getTime());
+      const primary = existingWallets[0];
+      const saved = await saveUserWallet(fbUser.uid, {
+        status: "active",
+        address: primary.address ?? null,
+        blockchain: primary.blockchain ?? "ARC-TESTNET",
+        circleWalletId: primary.id,
+        balanceCents: 0,
+      });
+      return { status: "active", balanceCents: saved.balanceCents };
+    }
+
     const res = await circle.createWallets({
       blockchains: ["ARC-TESTNET"],
       count: 1,

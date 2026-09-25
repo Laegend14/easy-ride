@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getAdminAuth, hasAdminCredentials } from "@/lib/firebase/admin";
 import { setFirebaseSessionCookie, clearFirebaseSessionCookie } from "@/lib/firebase/session";
-import { getUserProfile, saveUserProfile, saveAgentPreferences } from "@/lib/firebase/db";
+import { getUserProfile, saveUserProfile, saveAgentPreferences, getUserWallet } from "@/lib/firebase/db";
 
 export type AuthState = { error: string | null };
 
@@ -69,18 +69,37 @@ export async function login(
     return { error: "That email or password doesn't look right. Try again." };
   }
 
-  // Check onboarding status in Firestore / memory
-  const profile = await getUserProfile(uid);
-  const onboardingCompleted = Boolean(profile?.onboardingCompleted);
+  // Check onboarding status in Firestore / memory / Circle
+  let profile = await getUserProfile(uid);
+  let onboardingCompleted = Boolean(profile?.onboardingCompleted);
+
+  // If not already marked completed, check if user has an existing Circle wallet
+  if (!onboardingCompleted) {
+    const wallet = await getUserWallet(uid);
+    if (wallet?.circleWalletId) {
+      onboardingCompleted = true;
+      if (!profile) {
+        profile = await saveUserProfile(uid, {
+          email: userEmail,
+          fullName: userEmail.split("@")[0],
+          onboardingCompleted: true,
+        });
+      }
+    }
+  }
+
+  // If user has a wallet or profile, preserve their account and skip onboarding
+  const hasAccount = Boolean(onboardingCompleted);
 
   // Establish session
   await setFirebaseSessionCookie({
     uid,
     email: userEmail,
-    onboardingCompleted,
+    displayName: profile?.fullName || userEmail.split("@")[0],
+    onboardingCompleted: hasAccount,
   });
 
-  if (!profile || !profile.onboardingCompleted) {
+  if (!hasAccount) {
     redirect("/onboarding");
   }
 
