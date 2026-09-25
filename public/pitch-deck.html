@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easy Ride — Investor & Hackathon Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(18, 24, 38, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #00f2fe;
+      --accent: #4facfe;
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --gradient-primary: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #8b5cf6 100%);
+      --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .glow-1 {
+      position: absolute;
+      top: -15%;
+      left: 10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.12) 0%, transparent 70%);
+      filter: blur(80px);
+    }
+    .glow-2 {
+      position: absolute;
+      bottom: -20%;
+      right: 5%;
+      width: 65vw;
+      height: 65vw;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.14) 0%, transparent 70%);
+      filter: blur(90px);
+    }
+
+    /* 16:9 Slide Presentation Frame */
+    .slide-deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1280px;
+      height: 100%;
+      max-height: 720px;
+      padding: 40px 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px) scale(0.98);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Header & Branding */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .brand-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      padding: 6px 14px;
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      border-radius: 9999px;
+    }
+    .slide-num {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* Headings & Texts */
+    h1, h2, h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .hero-title {
+      font-size: clamp(38px, 5.5vw, 68px);
+      line-height: 1.08;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+    .slide-title {
+      font-size: clamp(28px, 3.8vw, 44px);
+      line-height: 1.15;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .slide-subtitle {
+      font-size: clamp(15px, 1.6vw, 19px);
+      color: var(--muted);
+      max-width: 800px;
+      line-height: 1.5;
+    }
+
+    /* Grid & Cards */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      border-color: rgba(0, 242, 254, 0.3);
+      transform: translateY(-2px);
+    }
+    .card-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .card-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .badge-highlight {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(139, 92, 246, 0.2);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      margin-bottom: 10px;
+    }
+
+    /* Stat Box */
+    .stat-number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 40px;
+      font-weight: 800;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Controls & Navigation */
+    .controls {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      padding: 8px 18px;
+      backdrop-filter: blur(20px);
+      z-index: 100;
+    }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 18px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary);
+    }
+    .nav-indicator {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      min-width: 60px;
+      text-align: center;
+    }
+    .progress-bar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 100;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 10%;
+      background: var(--gradient-primary);
+      transition: width 0.3s ease;
+    }
+
+    /* Chart Container */
+    .chart-box {
+      position: relative;
+      width: 100%;
+      height: 250px;
+      margin-top: 10px;
+    }
+
+    /* Architecture Pipeline */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .pipe-step {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+    }
+    .pipe-step.active {
+      border-color: rgba(0, 242, 254, 0.4);
+      background: rgba(0, 242, 254, 0.04);
+    }
+    .pipe-arrow {
+      color: var(--muted);
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Glow FX -->
+  <div class="ambient-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="slide-deck">
+
+    <!-- SLIDE 1: Title Slide -->
+    <div class="slide active" data-index="0">
+      <div class="slide-header">
+        <span class="brand-tag">⚡ Easy Ride Pitch Deck</span>
+        <span class="slide-num">01 / 10</span>
+      </div>
+      <div style="margin: auto 0; text-align: left; max-width: 900px;">
+        <span class="badge-highlight">Autonomous Mobility Protocol</span>
+        <h1 class="hero-title">Just Say Where You Want to Go.</h1>
+        <p class="slide-subtitle" style="font-size: 22px; margin-bottom: 24px;">
+          The world's first autonomous AI dispatch & recovery platform for ridesharing — powered by <strong>Circle Developer-Controlled Wallets</strong> and <strong>1-second native USDC smart escrow</strong> on Arc Testnet.
+        </p>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div style="padding: 8px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-size: 13px;">
+            🔗 <strong>Live dApp:</strong> easy-ride-orpin.vercel.app
+          </div>
+          <div style="padding: 8px 16px; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 10px; font-size: 13px; color: var(--primary);">
+            💎 <strong>Circle Wallets + Arc USDC Escrow</strong>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 13px; color: var(--muted); display: flex; justify-content: space-between;">
+        <span>Presenter: Abraham (Lead Architect & Founder)</span>
+        <span>Press Space or Right Arrow →</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Problem Statement -->
+    <div class="slide" data-index="1">
+      <div class="slide-header">
+        <span class="brand-tag">The Problem</span>
+        <span class="slide-num">02 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Ridesharing Is Broken for Riders and Drivers</h2>
+        <p class="slide-subtitle">Traditional ridesharing oligopolies trap users in predatory cycles of surging prices and broken UX.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon">🔀</div>
+          <div class="card-title">App Fragmentation</div>
+          <div class="card-desc">Riders manually toggle between Uber, Lyft, and Waymo to compare prices and ETAs, wasting minutes and cognitive energy before every trip.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📈</div>
+          <div class="card-title">Predatory Surge Pricing</div>
+          <div class="card-desc">Algorithms spike prices up to 300% during rain, events, or commute hours with zero transparency or alternative route discovery.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚫</div>
+          <div class="card-title">Cancellation Hell</div>
+          <div class="card-desc">Drivers cancel after 10 minutes of waiting. Riders are forced to restart the search, suffer higher surge fares, and endure double card holds.</div>
+        </div>
+      </div>
+      <div style="padding: 14px 20px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; font-size: 13px; color: #fca5a5;">
+        ⚠️ <strong>The Cost:</strong> Over $45 Billion in annual surge premiums and 25–40% intermediary platform take-rates extracted from drivers.
+      </div>
+    </div>
+
+    <!-- SLIDE 3: The Solution -->
+    <div class="slide" data-index="2">
+      <div class="slide-header">
+        <span class="brand-tag">The Solution</span>
+        <span class="slide-num">03 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Easy Ride: Autonomous AI Rideshare Dispatch</h2>
+        <p class="slide-subtitle">An intelligent agent that negotiates, locks funds in smart escrow, and auto-recovers — entirely in 1-second USDC.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card" style="border-color: rgba(0, 242, 254, 0.3);">
+          <div class="card-icon">🤖</div>
+          <div class="card-title">Conversational AI Dispatch</div>
+          <div class="card-desc">Simply prompt: <em>"Get me to the airport under $35, EV preferred."</em> Gemini AI translates natural language into structured multi-provider bids.</div>
+        </div>
+        <div class="card" style="border-color: rgba(79, 172, 254, 0.3);">
+          <div class="card-icon">🛡️</div>
+          <div class="card-title">Smart Contract Escrow</div>
+          <div class="card-desc">Fares are securely held in <code>EasyRideEscrow.sol</code> on Arc Testnet. Funds are never released until the ride safely completes — zero fraud.</div>
+        </div>
+        <div class="card" style="border-color: rgba(139, 92, 246, 0.3);">
+          <div class="card-icon">🔄</div>
+          <div class="card-title">Autonomous Recovery</div>
+          <div class="card-desc">If a driver cancels, the agent reassigns to the next best ride instantly while keeping escrowed funds locked. No double billing, ever.</div>
+        </div>
+      </div>
+      <div style="padding: 14px 20px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; font-size: 13px; color: #6ee7b7;">
+        ✨ <strong>The Result:</strong> Zero comparison fatigue, guaranteed transparent fares, and instantaneous 1-second on-chain settlement.
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Architecture Pipeline -->
+    <div class="slide" data-index="3">
+      <div class="slide-header">
+        <span class="brand-tag">System Architecture</span>
+        <span class="slide-num">04 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">End-to-End Autonomous Lifecycle</h2>
+        <p class="slide-subtitle">Bridging conversational intelligence with institutional-grade Web3 settlement.</p>
+      </div>
+      
+      <div class="pipeline">
+        <div class="pipe-step active">
+          <div style="font-size: 24px; margin-bottom: 6px;">💬</div>
+          <div style="font-weight: 700; font-size: 14px;">1. Intent Prompt</div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Gemini 2.5 Flash parses budget, route & vehicle preferences</div>
+        </div>
+        <div class="pipe-arrow">➔</div>
+        <div class="pipe-step active">
+          <div style="font-size: 24px; margin-bottom: 6px;">📊</div>
+          <div style="font-weight: 700; font-size: 14px;">2. Multi-Bid Scoring</div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Aggregates Uber, Lyft & Waymo quotes in real-time</div>
+        </div>
+        <div class="pipe-arrow">➔</div>
+        <div class="pipe-step active">
+          <div style="font-size: 24px; margin-bottom: 6px;">🔐</div>
+          <div style="font-weight: 700; font-size: 14px;">3. Circle & Arc Escrow</div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Developer Wallet locks exact USDC in Arc smart contract</div>
+        </div>
+        <div class="pipe-arrow">➔</div>
+        <div class="pipe-step active">
+          <div style="font-size: 24px; margin-bottom: 6px;">🏁</div>
+          <div style="font-weight: 700; font-size: 14px;">4. 1s Settlement</div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Smart contract releases funds; verifiable on Arcscan</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div class="card" style="padding: 16px;">
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--primary);">Web2 Onboarding Experience</div>
+          <div style="font-size: 13px; color: var(--muted);">Google Sign-In & Email magic links map automatically to Circle Developer-Controlled Wallets. No seed phrases, zero crypto hurdles.</div>
+        </div>
+        <div class="card" style="padding: 16px;">
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: var(--purple);">Institutional Web3 Security</div>
+          <div style="font-size: 13px; color: var(--muted);">Reentrancy-guarded Solidity contract (EasyRideEscrow) deployed on Arc Testnet (<code>0xc9664516...</code>) with 100% test pass rate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Circle & Arc Deep Dive -->
+    <div class="slide" data-index="4">
+      <div class="slide-header">
+        <span class="brand-tag">Circle & Arc Integration</span>
+        <span class="slide-num">05 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Engineered on Circle's Flagship Infrastructure</h2>
+        <p class="slide-subtitle">Leveraging the fastest EVM settlement layer with developer-controlled digital dollars.</p>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="badge-highlight">Wallets</div>
+          <div class="card-title" style="font-size: 16px;">Circle Wallets</div>
+          <div class="card-desc">Non-custodial Developer-Controlled Wallets provisioned via <code>@circle-fin</code> SDK with persistent user refId mapping.</div>
+        </div>
+        <div class="card">
+          <div class="badge-highlight">Currency</div>
+          <div class="card-title" style="font-size: 16px;">Native USDC</div>
+          <div class="card-desc">Arc Testnet uses native USDC as gas and fare currency, eliminating volatile token risks and conversions.</div>
+        </div>
+        <div class="card">
+          <div class="badge-highlight">Speed</div>
+          <div class="card-title" style="font-size: 16px;">1-Second Finality</div>
+          <div class="card-desc">Arc's sub-second block times ensure instant lock & release for real-world physical transportation.</div>
+        </div>
+        <div class="card">
+          <div class="badge-highlight">Bridge</div>
+          <div class="card-title" style="font-size: 16px;">Circle CCTP</div>
+          <div class="card-desc">Supports cross-chain deposits from Ethereum Sepolia, Base, and Arbitrum to Arc Domain 26.</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 16px 20px; flex-direction: row; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-weight: 700; color: #fff;">Smart Contract Verification</div>
+          <div style="font-size: 12px; color: var(--muted); font-family: monospace;">0xc966451619B6a30b1aF8Dd8364B2A79a7da2C447</div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <span style="font-size: 12px; padding: 4px 10px; background: rgba(16,185,129,0.15); border: 1px solid #10b981; border-radius: 6px; color: #6ee7b7;">✓ Audited Logic</span>
+          <span style="font-size: 12px; padding: 4px 10px; background: rgba(0,242,254,0.15); border: 1px solid #00f2fe; border-radius: 6px; color: #a5f3fc;">✓ Arcscan Verified</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Market Opportunity (Chart) -->
+    <div class="slide" data-index="5">
+      <div class="slide-header">
+        <span class="brand-tag">Market Opportunity</span>
+        <span class="slide-num">06 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Capturing a $350B Global Shift to Agentic Mobility</h2>
+        <p class="slide-subtitle">Ridesharing is transitioning from human dispatch to autonomous AI routing and instant stablecoin settlement.</p>
+      </div>
+
+      <div class="grid-2" style="align-items: center;">
+        <div class="chart-box">
+          <canvas id="marketChart"></canvas>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card" style="padding: 16px;">
+            <div class="stat-number">$350B</div>
+            <div class="stat-label">Total Addressable Market (TAM) by 2030</div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Global ride-hailing & autonomous vehicle dispatch volume.</div>
+          </div>
+          <div class="card" style="padding: 16px;">
+            <div class="stat-number">$45B</div>
+            <div class="stat-label">Serviceable Addressable Market (SAM)</div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Aggregated multi-provider rides and corporate commute budgets.</div>
+          </div>
+          <div class="card" style="padding: 16px;">
+            <div class="stat-number">$4.2B</div>
+            <div class="stat-label">Serviceable Obtainable Market (SOM)</div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Web3-native instant settlement and surge-arbitraged rides.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Business Model & Economics -->
+    <div class="slide" data-index="6">
+      <div class="slide-header">
+        <span class="brand-tag">Business Model</span>
+        <span class="slide-num">07 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Multi-Stream Monetization with 10x Lower Take-Rates</h2>
+        <p class="slide-subtitle">Unlike Web2 platforms charging 25–40%, Easy Ride aligns incentives with transparent protocol fees.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <div class="card-title">1.5% Settlement Fee</div>
+          <div class="card-desc">Collected automatically by the smart escrow upon completion. Highly competitive compared to Web2 30% take rates, driving massive driver loyalty.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">💰</div>
+          <div class="card-title">10% Savings Sharing</div>
+          <div class="card-desc">When our AI agent discovers a quote that saves the rider $15 compared to competing apps, Easy Ride earns a 10% performance fee ($1.50).</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">👑</div>
+          <div class="card-title">Easy Ride Pro ($9.99/mo)</div>
+          <div class="card-desc">Premium subscription unlocking automated morning commute bookings, zero settlement fees, priority autonomous recovery, and calendar sync.</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="padding: 14px; text-align: center;">
+          <div style="font-weight: 700; color: #fff;">$24.50</div>
+          <div style="font-size: 12px; color: var(--muted);">Average Trip Fare</div>
+        </div>
+        <div class="card" style="padding: 14px; text-align: center;">
+          <div style="font-weight: 700; color: var(--primary);">$1.15</div>
+          <div style="font-size: 12px; color: var(--muted);">Blended Net Revenue / Ride</div>
+        </div>
+        <div class="card" style="padding: 14px; text-align: center;">
+          <div style="font-weight: 700; color: var(--green);">82%</div>
+          <div style="font-size: 12px; color: var(--muted);">Gross Margin Efficiency</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Traction & Validation -->
+    <div class="slide" data-index="7">
+      <div class="slide-header">
+        <span class="brand-tag">Traction & Status</span>
+        <span class="slide-num">08 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Shipped, Live & Verified on Arc Testnet</h2>
+        <p class="slide-subtitle">Not a mockup — a fully functional, production-deployed decentralized application.</p>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Live Production</div>
+          <div class="card-desc" style="margin-top: 8px;">Deployed and running on Vercel Edge with zero server errors.</div>
+        </div>
+        <div class="card">
+          <div class="stat-number">56/56</div>
+          <div class="stat-label">Automated Tests</div>
+          <div class="card-desc" style="margin-top: 8px;">Full Vitest and Hardhat test suite covering security, rate limiting, and contract math.</div>
+        </div>
+        <div class="card">
+          <div class="stat-number">1s</div>
+          <div class="stat-label">Settlement Time</div>
+          <div class="card-desc" style="margin-top: 8px;">Verified Arc Testnet block time for instant escrow finality.</div>
+        </div>
+        <div class="card">
+          <div class="stat-number">0</div>
+          <div class="stat-label">Duplicate Wallets</div>
+          <div class="card-desc" style="margin-top: 8px;">Deterministic Circle refId binding ensures persistent user identity.</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; color: #fff;">Independent On-Chain Verification</div>
+            <div style="font-size: 13px; color: var(--muted);">Explore transactions, smart escrow locks, and receipts live on the Arc Testnet block explorer.</div>
+          </div>
+          <a href="https://testnet.arcscan.app/address/0xc966451619B6a30b1aF8Dd8364B2A79a7da2C447" target="_blank" style="padding: 8px 16px; background: rgba(0, 242, 254, 0.15); border: 1px solid #00f2fe; border-radius: 8px; color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 600;">View on Arcscan ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Roadmap -->
+    <div class="slide" data-index="8">
+      <div class="slide-header">
+        <span class="brand-tag">Roadmap</span>
+        <span class="slide-num">09 / 10</span>
+      </div>
+      <div>
+        <h2 class="slide-title">Strategic Growth Milestones (2026 – 2027)</h2>
+        <p class="slide-subtitle">Scaling from testnet proof-of-concept to global autonomous mobility network.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <div class="badge-highlight">Milestone 1 • Current</div>
+          <div class="card-title">Protocol Core & Arc Testnet</div>
+          <ul style="font-size: 13px; color: var(--muted); line-height: 1.7; padding-left: 18px;">
+            <li>Circle Developer-Controlled Wallets</li>
+            <li>Arc Testnet EasyRideEscrow deployment</li>
+            <li>Multi-provider AI intent parser</li>
+            <li>Autonomous cancellation recovery</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <div class="badge-highlight">Milestone 2 • Q4 2026</div>
+          <div class="card-title">CCTP & Mobile Experience</div>
+          <ul style="font-size: 13px; color: var(--muted); line-height: 1.7; padding-left: 18px;">
+            <li>Cross-chain CCTP deposits (Base / Sepolia)</li>
+            <li>Apple Pay direct fiat on-ramp via Stripe</li>
+            <li>React Native progressive mobile client</li>
+            <li>P2P driver dispatch pilot in San Francisco</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--purple);">
+          <div class="badge-highlight">Milestone 3 • 2027</div>
+          <div class="card-title">Autonomous Robotaxi Fleet APIs</div>
+          <ul style="font-size: 13px; color: var(--muted); line-height: 1.7; padding-left: 18px;">
+            <li>Direct Waymo & Tesla Robotaxi API connectors</li>
+            <li>Arc Mainnet protocol deployment</li>
+            <li>Decentralized dispute resolution network</li>
+            <li>Enterprise corporate commute billing</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Call to Action -->
+    <div class="slide" data-index="9">
+      <div class="slide-header">
+        <span class="brand-tag">Join The Future</span>
+        <span class="slide-num">10 / 10</span>
+      </div>
+      <div style="margin: auto 0; text-align: center; max-width: 800px; align-self: center;">
+        <span class="badge-highlight" style="align-self: center;">The Future of Mobility</span>
+        <h1 class="hero-title" style="font-size: 56px; margin: 12px 0;">Mobility Without Friction.</h1>
+        <p class="slide-subtitle" style="margin: 0 auto 30px auto; font-size: 20px;">
+          Easy Ride unites autonomous AI agency with Circle's digital dollar infrastructure and Arc's 1-second settlement to give riders the freedom they deserve.
+        </p>
+
+        <div style="display: flex; justify-content: center; gap: 16px;">
+          <a href="https://easy-ride-orpin.vercel.app" target="_blank" style="padding: 12px 28px; background: var(--gradient-primary); border-radius: 12px; color: #000; font-weight: 700; text-decoration: none; font-size: 15px;">Launch Live Application ↗</a>
+          <a href="https://github.com/Laegend14/easy-ride" target="_blank" style="padding: 12px 28px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; color: #fff; font-weight: 600; text-decoration: none; font-size: 15px;">GitHub Codebase ↗</a>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+        <span>Contract: 0xc966451619B6a30b1aF8Dd8364B2A79a7da2C447</span>
+        <span>Built with Circle & Arc Testnet • 2026</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Persistent Bottom Controls -->
+  <div class="controls">
+    <button class="nav-btn" id="prevBtn" title="Previous Slide">◀</button>
+    <div class="nav-indicator" id="navIndicator">1 / 10</div>
+    <button class="nav-btn" id="nextBtn" title="Next Slide">▶</button>
+    <button class="nav-btn" id="fullscreenBtn" title="Toggle Fullscreen" style="margin-left: 8px;">⛶</button>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const navIndicator = document.getElementById('navIndicator');
+    const progressBar = document.getElementById('progressBar');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    let currentSlide = 0;
+    const totalSlides = slides.length;
+
+    function updateSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= totalSlides) index = totalSlides - 1;
+      currentSlide = index;
+
+      slides.forEach((s, idx) => {
+        if (idx === currentSlide) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+
+      navIndicator.textContent = `${currentSlide + 1} / ${totalSlides}`;
+      progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+
+      // Render chart if on slide 6 (index 5)
+      if (currentSlide === 5) {
+        initMarketChart();
+      }
+    }
+
+    prevBtn.addEventListener('click', () => updateSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => updateSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        updateSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        updateSlide(currentSlide - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Chart.js initialization
+    let chartInitialized = false;
+    function initMarketChart() {
+      if (chartInitialized) return;
+      const ctx = document.getElementById('marketChart');
+      if (!ctx) return;
+
+      chartInitialized = true;
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['2024', '2026 (Now)', '2028', '2030 (Projected)'],
+          datasets: [
+            {
+              label: 'Global Mobility TAM ($B)',
+              data: [130, 165, 240, 350],
+              backgroundColor: 'rgba(79, 172, 254, 0.25)',
+              borderColor: '#4facfe',
+              borderWidth: 2,
+              borderRadius: 6,
+            },
+            {
+              label: 'Autonomous Agentic Settlement ($B)',
+              data: [4, 18, 55, 120],
+              backgroundColor: 'rgba(0, 242, 254, 0.75)',
+              borderColor: '#00f2fe',
+              borderWidth: 2,
+              borderRadius: 6,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { family: 'Inter', size: 12 } }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleColor: '#fff',
+              bodyColor: '#00f2fe',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y: {
+              ticks: { color: '#94a3b8', callback: (v) => '$' + v + 'B' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Initialize first slide
+    updateSlide(0);
+  </script>
+</body>
+</html>
